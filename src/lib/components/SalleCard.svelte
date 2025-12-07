@@ -1,63 +1,70 @@
-<svelte:options customElement="salle-card" />
+<svelte:options customElement="salle-card"/>
 
 <script lang="ts">
-	import { Card } from 'flowbite-svelte';
+  type Slot = {
+    id: string;
+    title: string;
+    description: string;
+    href: string;
+    img: string;
+    start: string;
+    end: string;
+    loading?: boolean;
+  };
 
-	type Slot = {
-		id: string;
-		title: string;
-		description: string;
-		img: string;
-		start: string;
-		end: string;
-		loading?: boolean;
-	};
+  const {roomLabel, description, img, href, slots, onSelectSlot, loading} = $props<{
+    roomLabel: string;
+    slots: Slot[];
+    onSelectSlot: (slot: Slot) => void
+  }>();
 
-	const { roomLabel, description, img, slots, onSelectSlot, loading } = $props<{
-		roomLabel: string;
-		slots: Slot[];
-		onSelectSlot: (slot: Slot) => void
-	}>();
+  function formatTime(iso: string): string {
+    if (!iso) return '';
+    const date = new Date(iso);
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
 
-	function formatTime(iso: string): string {
-		if (!iso) return '';
-		const date = new Date(iso);
-		return date.toLocaleTimeString('fr-FR', {
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
-
-	function handleClick(slot: Slot) {
-		onSelectSlot(slot);
-	}
+  function handleClick(slot: Slot) {
+    onSelectSlot(slot);
+  }
 </script>
 
-<Card {img}>
-	<div class="m-6">
-		<a href="">
-			<h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{roomLabel}</h5>
-		</a>
-
-		<p class="mb-3 leading-tight font-normal text-gray-700 dark:text-gray-400">{description}</p>
-
-		{#if loading}
-			<p class="empty">Chargement des créneaux...</p>
-		{:else if !slots || slots.length === 0}
-			<p class="empty">Aucun créneau libre pour cette salle.</p>
-		{:else}
-			<ul class="slots">
-				{#each slots as slot}
-					<li class="slot">
-						<button type="button" onclick={() => handleClick(slot)}>
-							{formatTime(slot.start)}
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</div>
-</Card>
+<a
+        class="card preset-filled-surface-100-900 border-[1px] border-surface-200-800 card-hover divide-surface-200-800 block max-w-md divide-y overflow-hidden"
+        {href}
+>
+    <header>
+        <img alt="banner" class="w-full" src={img}/>
+    </header>
+    <article class="space-y-4 p-4">
+        <div>
+            <h2 class="h3">{roomLabel}</h2>
+        </div>
+        <p class="opacity-60">
+            {description}
+        </p>
+    </article>
+    <footer class="flex items-center justify-between gap-4 p-4">
+        {#if loading}
+            <p class="empty">Chargement des créneaux...</p>
+        {:else if !slots || slots.length === 0}
+            <p class="empty">Aucun créneau libre pour cette salle.</p>
+        {:else}
+            <ul class="slots">
+                {#each slots as slot}
+                    <li class="slot">
+                        <button type="button" onclick={() => handleClick(slot)}>
+                            {formatTime(slot.start)}
+                        </button>
+                    </li>
+                {/each}
+            </ul>
+        {/if}
+    </footer>
+</a>
 
 <style>
     .slots {
@@ -85,6 +92,6 @@
     .empty {
         font-size: 0.9rem;
         color: #777;
-				font-style: italic;
+        font-style: italic;
     }
 </style>

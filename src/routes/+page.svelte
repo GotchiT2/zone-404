@@ -1,167 +1,272 @@
 <script lang="ts">
-	import { Heading, GradientButton, Spinner } from 'flowbite-svelte';
-	import { Footer, FooterLinkGroup, FooterLink, FooterIcon, FooterCopyright } from "flowbite-svelte";
-	import { FacebookSolid, InstagramSolid } from "flowbite-svelte-icons";
-	import SalleCard from '$lib/components/SalleCard.svelte';
-	import Header from '$lib/components/Header.svelte';
-	type CalendarKey = 'salle1' | 'salle2' | 'salle3';
+  import SalleCard from '$lib/components/SalleCard.svelte';
+  import Logo from '$lib/components/Logo.svelte';
+  import {Progress} from '@skeletonlabs/skeleton-svelte';
+  import InfosPratiques from "$lib/components/InfosPratiques.svelte";
 
-	type SlotWithCalendar = {
-		id: string;
-		title: string;
-		start: string;
-		end: string;
-		calendar: CalendarKey;
-	};
+  type CalendarKey = 'salle1' | 'salle2' | 'salle3';
 
-	let selectedDate = $state('');
-	let allSlots = $state<SlotWithCalendar[]>([]);
-	let loading = $state(false);
-	let error = $state<string | null>(null);
+  type SlotWithCalendar = {
+    id: string;
+    title: string;
+    start: string;
+    end: string;
+    calendar: CalendarKey;
+  };
 
-	async function fetchSlots(date: string) {
-		loading = true;
-		error = null;
-		try {
-			const res = await fetch(`/api/calendar/slots/${date}`);
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.error || 'Erreur lors du chargement des créneaux');
-			}
-			allSlots = await res.json();
-		} catch (e) {
-			error = (e as Error).message;
-			allSlots = [];
-		} finally {
-			loading = false;
-		}
-	}
+  let selectedDate = $state('');
+  let allSlots = $state<SlotWithCalendar[]>([]);
+  let loading = $state(false);
+  let error = $state<string | null>(null);
 
-	$effect(() => {
-		if (!selectedDate) {
-			allSlots = [];
-			return;
-		}
-		fetchSlots(selectedDate);
-	});
+  async function fetchSlots(date: string) {
+    loading = true;
+    error = null;
+    try {
+      const res = await fetch(`/api/calendar/slots/${date}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Erreur lors du chargement des créneaux');
+      }
+      allSlots = await res.json();
+    } catch (e) {
+      error = (e as Error).message;
+      allSlots = [];
+    } finally {
+      loading = false;
+    }
+  }
 
-	let slotsSalle1 = $derived(allSlots.filter((s) => s.calendar === 'salle1'));
-	let slotsSalle2 = $derived(allSlots.filter((s) => s.calendar === 'salle2'));
-	let slotsSalle3 = $derived(allSlots.filter((s) => s.calendar === 'salle3'));
+  $effect(() => {
+    if (!selectedDate) {
+      allSlots = [];
+      return;
+    }
+    fetchSlots(selectedDate);
+  });
 
-	function handleSelectSlot(slot: any) {
-		console.log('Créneau sélectionné :', slot);
-		// ici tu peux ouvrir un modal de réservation par ex.
-	}
+  let slotsSalle1 = $derived(allSlots.filter((s) => s.calendar === 'salle1'));
+  let slotsSalle2 = $derived(allSlots.filter((s) => s.calendar === 'salle2'));
+  let slotsSalle3 = $derived(allSlots.filter((s) => s.calendar === 'salle3'));
+
+  let showModal = $state(false);
+  let modalSlot: SlotWithCalendar | null = $state(null);
+  let modalPlayers = $state(2);
+  let modalLoading = $state(false);
+  let modalError = $state<string | null>(null);
+
+  function handleSelectSlot(calendarKey: CalendarKey, slot: any) {
+    modalSlot = {...slot, calendar: calendarKey};
+    modalPlayers = 2;
+    modalError = null;
+    showModal = true;
+  }
+
+  function formatTime(iso: string): string {
+    if (!iso) return '';
+    const date = new Date(iso);
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  async function confirmModal() {
+    if (!modalSlot) return;
+    if (modalPlayers < 2 || modalPlayers > 6) {
+      modalError = 'Le nombre de joueurs doit être compris entre 2 et 6';
+      return;
+    }
+
+    modalLoading = true;
+    modalError = null;
+
+    try {
+      const res = await fetch(
+        `/api/calendar/${modalSlot.calendar}/start-reservation`,
+        {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            slotId: modalSlot.id,
+            players: modalPlayers
+          })
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Erreur lors du démarrage de la réservation');
+      }
+
+      // On retire le créneau de la liste puisqu’il n’est plus [LIBRE]
+      allSlots = allSlots.filter((s) => s.id !== modalSlot?.id);
+
+      showModal = false;
+      modalSlot = null;
+    } catch (e) {
+      modalError = (e as Error).message;
+    } finally {
+      modalLoading = false;
+    }
+  }
 </script>
 
-<Header/>
+<div class="w-auto h-full overflow-scroll flex flex-col items-center">
+    <div class="relative w-full">
+        <video autoplay class="w-full h-full mask-b-from-60% mask-b-to-100%" loop playsinline src="/plop.webm"></video>
+        <div class="absolute top-0 w-full h-full bg-[#00000080] flex items-center justify-center flex-col gap-4 p-4 text-center">
+            <h1 class="h1 text-white">
+                <Logo classname="w-128 mx-auto"/>
+                <span class="sr-only">Zone 404</span>
+            </h1>
 
-<div class="w-full relative">
-	<video class="w-full mask-b-from-60% mask-b-to-100% " src="/plop.webm" autoplay playsinline loop></video>
-	<div class="absolute top-0 w-full h-full bg-[#00000080] flex items-center justify-center flex-col gap-4 p-4 text-center">
-		<Heading
-			tag="h1"
-			class="text-white dark:text-primary-500"
-		>
-			Zone404
-		</Heading>
+            <h2 class="h2 text-white">
+                Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quidem.
+            </h2>
 
-		<Heading
-			tag="h2"
-			class="text-white dark:text-primary-500 text-lg"
-		>
-			Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quidem.
-		</Heading>
+            <button class="btn preset-outlined-surface-500 mt-16" type="button">Découvrir nos offres</button>
+        </div>
+    </div>
 
-		<GradientButton outline color="cyanToBlue" class="cursor-pointer">Cyan to Blue</GradientButton>
-	</div>
+    <section class="w-full bg-black p-8">
+
+        <div class="flex flex-col items-center justify-center gap-4 mb-8">
+            <h2 class="h2 text-white mb-8">
+                Planning des salles
+            </h2>
+
+            <label class="text-white">
+                {#if loading}
+                    <Progress class="items-center w-fit" value={null}>
+                        <Progress.Circle>
+                            <Progress.CircleTrack/>
+                            <Progress.CircleRange/>
+                        </Progress.Circle>
+                        <Progress.ValueText/>
+                    </Progress>
+                {/if}
+                Sélectionnez une date :
+                <input
+                        bind:value={selectedDate}
+                        class="bg-transparent border border-white rounded px-2 py-1 ml-2 text-white"
+                        type="date"
+                />
+            </label>
+        </div>
+
+        <div class="flex mx-auto w-full justify-center gap-8 my-16">
+            <SalleCard
+                    description="Plongez vos enfants dans un escape game jungle ludique et immersif ! En équipe de 2 à 6, les explorateurs de moins de 8 ans devront résoudre de petites énigmes et retrouver le trésor caché. Une aventure idéale pour une première expérience d’escape game."
+                    href="/escape-kids"
+                    img="/escape-kids-thumbnail.png"
+                    {loading}
+                    onSelectSlot={handleSelectSlot}
+                    roomLabel="Escape Kids : À la recherche du trésor de la jungle"
+                    slots={slotsSalle1}
+            />
+
+            <SalleCard
+                    description="Osez ce escape game thriller pour 2 à 6 joueurs à partir de 16 ans. Fouillez le cabinet d’un tatoueur dérangé, rassemblez les preuves d’une série de meurtres et effacez toute trace de votre passage. Une enquête intense pour amateurs de sensations fortes."
+                    href="/escape-kids"
+                    img="/tatoueur-thumbnail.png"
+                    {loading}
+                    onSelectSlot={handleSelectSlot}
+                    roomLabel="Le Tatoueur Maudit : enquête dans un cabinet inquiétant"
+                    slots={slotsSalle2}
+            />
+
+            <SalleCard
+                    description="Dans ce escape game futuriste, vous êtes les derniers espoirs de l’humanité. Explorez un laboratoire abandonné, analysez les indices et reconstituez l’antidote du virus qui a décimé 99,6 % de la population. Survivrez-vous… ou succomberez comme les autres ?"
+                    href="/escape-kids"
+                    img="/labo-thumbnail.png"
+                    {loading}
+                    onSelectSlot={handleSelectSlot}
+                    roomLabel="Le Laboratoire de l’Extinction"
+                    slots={slotsSalle3}
+            />
+        </div>
+    </section>
+
+    <section class="w-full bg-blue-400 p-8 my-16 shadow-lg shadow-blue-500/50 ">
+        <div class="flex flex-col items-center justify-center gap-4 mb-8 text-black">
+            <h2 class="h2 text-center mb-4">
+                Réservez<br/><span class="font-extrabold">un escape game</span>
+            </h2>
+
+            <p>Choisissez votre créneau dès maintenant <span class="bg-black text-blue-400 font-bold p-2">à partir de XX€ par joueur !</span>
+            </p>
+
+            <button class="btn btn-lg  preset-tonal-surface mt-4" type="button">Réserver maintenant</button>
+        </div>
+    </section>
+
+    <section class="w-full bg-black p-8 my-16">
+        <div class="flex flex-col items-center justify-center gap-4 mb-8">
+            <h2 class="h2 text-white text-center mb-4">
+                Découvrez<br/><span class="font-extrabold">nos formules</span>
+            </h2>
+
+            <div class="w-1/2 grid grid-cols-4 gap-4">
+                <div class="card text-center font-bold aspect-video flex justify-center items-center bg-[url(formule-anniversaire-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+                    <h3 class="h3 shadow-2xl">Formule anniversaire</h3>
+                </div>
+
+                <div class="card text-center font-bold aspect-video flex justify-center items-center bg-[url(reserver-une-partie-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+                    <h3 class="h3">Réservez autant de parties que vous le voulez !</h3>
+                </div>
+
+                <div class="card text-center font-bold aspect-video flex justify-center items-center bg-[url(team-building-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+                    <h3 class="h3">Formule entreprise</h3>
+                </div>
+
+                <div class="card text-center font-bold aspect-video flex justify-center items-center bg-[url(escape-game-nature-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+                    <h3 class="h3">Escape game nature</h3>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <InfosPratiques/>
 </div>
 
-<section class="bg-black p-8">
+{#if showModal && modalSlot}
+    <div class="modal-backdrop">
+        <div class="modal">
+            <h2>Réservation en cours</h2>
+            <p>
+                Salle : {modalSlot.calendar}<br/>
+                Date : {selectedDate}<br/>
+                Heure : {formatTime(modalSlot.start)}
+            </p>
 
-	<div class="flex flex-col items-center justify-center gap-4 mb-8">
-		<Heading
-			tag="h2"
-			class="text-white dark:text-primary-500 text-5xl mb-8"
-		>
-			Planning des salles
-		</Heading>
+            <label>
+                Nombre de joueurs (2 à 6) :
+                <input
+                        type="number"
+                        min="2"
+                        max="6"
+                        bind:value={modalPlayers}
+                />
+            </label>
 
-		<label class="text-white">
-			{#if loading}
-				<Spinner color="blue" />
-			{/if}
-			Sélectionnez une date :
-			<input
-				type="date"
-				bind:value={selectedDate}
-				class="bg-transparent border border-white rounded px-2 py-1 ml-2 text-white"
-			/>
-		</label>
-	</div>
+            {#if modalError}
+                <p class="error">{modalError}</p>
+            {/if}
 
-	<div class="flex mx-auto w-full justify-center gap-8 mb-16">
-		<SalleCard
-			roomLabel="Escape Kids : À la recherche du trésor de la jungle"
-			description="Plongez vos enfants dans un escape game jungle ludique et immersif ! En équipe de 2 à 6, les explorateurs de moins de 8 ans devront résoudre de petites énigmes et retrouver le trésor caché. Une aventure idéale pour une première expérience d’escape game."
-			img="/escape-kids-thumbnail.png"
-			slots={slotsSalle1}
-			{loading}
-			onSelectSlot={handleSelectSlot}
-		/>
+            <div class="modal-actions">
+                <button type="button" on:click={() => (showModal = false)} disabled={modalLoading}>
+                    Annuler
+                </button>
+                <button type="button" on:click={confirmModal} disabled={modalLoading}>
+                    {#if modalLoading}Validation...{/if}
+                    {#if !modalLoading}Valider{/if}
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}
 
-		<SalleCard
-			roomLabel="Le Tatoueur Maudit : enquête dans un cabinet inquiétant"
-			description="Osez ce escape game thriller pour 2 à 6 joueurs à partir de 16 ans. Fouillez le cabinet d’un tatoueur dérangé, rassemblez les preuves d’une série de meurtres et effacez toute trace de votre passage. Une enquête intense pour amateurs de sensations fortes."
-			img="/tatoueur-thumbnail.png"
-			slots={slotsSalle2}
-			{loading}
-			onSelectSlot={handleSelectSlot}
-		/>
-
-		<SalleCard
-			roomLabel="Le Laboratoire de l’Extinction"
-			description="Dans ce escape game futuriste, vous êtes les derniers espoirs de l’humanité. Explorez un laboratoire abandonné, analysez les indices et reconstituez l’antidote du virus qui a décimé 99,6 % de la population. Survivrez-vous… ou succomberez comme les autres ?"
-			img="/labo-thumbnail.png"
-			slots={slotsSalle3}
-			{loading}
-			onSelectSlot={handleSelectSlot}
-		/>
-	</div>
-</section>
-
-<Footer footerType="sitemap">
-	<div class="grid grid-cols-2 gap-8 px-6 py-8 md:grid-cols-4">
-		<div>
-			<h2 class="mb-6 text-sm font-semibold text-gray-400 uppercase">Zone404</h2>
-			<FooterLinkGroup class="text-gray-900 dark:text-gray-200">
-				<FooterLink class="mb-4" href="/">Qui sommes nous ?</FooterLink>
-				<FooterLink class="mb-4" href="/">Le concept</FooterLink>
-				<FooterLink class="mb-4" href="/">Réserver une session</FooterLink>
-			</FooterLinkGroup>
-		</div>
-		<div>
-			<h2 class="mb-6 text-sm font-semibold text-gray-400 uppercase">Infos pratiques</h2>
-			<FooterLinkGroup class="text-gray-900 dark:text-gray-200">
-				<FooterLink class="mb-4" href="/">Où nous trouver ?</FooterLink>
-				<FooterLink class="mb-4" href="/">Horaires d'ouverture</FooterLink>
-				<FooterLink class="mb-4" href="/">Carte du bar</FooterLink>
-			</FooterLinkGroup>
-		</div>
-	</div>
-	<div class="bg-gray-100 px-4 py-6 md:flex md:items-center md:justify-between dark:bg-gray-700">
-		<FooterCopyright class="text-sm text-gray-900 sm:text-center dark:text-gray-200" href="/" by="Zone404™" />
-		<div class="mt-4 flex space-x-6 sm:justify-center md:mt-0 rtl:space-x-reverse">
-			<FooterIcon href="/">
-				<FacebookSolid class="h-5 w-5 text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white" />
-			</FooterIcon>
-			<FooterIcon href="/">
-				<InstagramSolid class="h-5 w-5 text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white" />
-			</FooterIcon>
-		</div>
-	</div>
-</Footer>
 
 <style>
     .grid {
@@ -172,38 +277,40 @@
     }
 
 
-    @keyframes animateGrain{
-        0%, 100% { transform:translate(0, 0) }
-        10%{
-            transform:translate(-5%,-10%)
+    @keyframes animateGrain {
+        0%, 100% {
+            transform: translate(0, 0)
         }
-        20%{
-            transform:translate(-15%,-20%)
+        10% {
+            transform: translate(-5%, -10%)
         }
-        30%{
-            transform:translate(-5%,-10%)
+        20% {
+            transform: translate(-15%, -20%)
         }
-        40%{
-            transform:translate(-15%,-20%)
+        30% {
+            transform: translate(-5%, -10%)
+        }
+        40% {
+            transform: translate(-15%, -20%)
         }
 
-        50%{
-            transform:translate(-5%,-10%)
+        50% {
+            transform: translate(-5%, -10%)
         }
-        60%{
-            transform:translate(-15%,-20%)
+        60% {
+            transform: translate(-15%, -20%)
         }
-        70%{
-            transform:translate(-5%,-10%)
+        70% {
+            transform: translate(-5%, -10%)
         }
-        80%{
-            transform:translate(-15%,-20%)
+        80% {
+            transform: translate(-15%, -20%)
         }
-        90%{
-            transform:translate(-5%,-10%)
+        90% {
+            transform: translate(-5%, -10%)
         }
-        100%{
-            transform:translate(-15%,-20%)
+        100% {
+            transform: translate(-15%, -20%)
         }
 
     }
