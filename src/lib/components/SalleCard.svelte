@@ -1,6 +1,9 @@
 <svelte:options customElement="salle-card"/>
 
 <script lang="ts">
+
+  import CreneauButton from "$lib/components/CreneauButton.svelte";
+
   type Slot = {
     id: string;
     title: string;
@@ -12,41 +15,29 @@
     loading?: boolean;
   };
 
-  const {roomLabel, description, img, href, slots, onSelectSlot, loading} = $props<{
+  const {roomLabel, description, img, href, slots, loading, selectedDate} = $props<{
     roomLabel: string;
     slots: Slot[];
     onSelectSlot: (slot: Slot) => void
   }>();
-
-  function formatTime(iso: string): string {
-    if (!iso) return '';
-    const date = new Date(iso);
-    return date.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  function handleClick(slot: Slot) {
-    onSelectSlot(slot);
-  }
 </script>
 
-<a
+<div
         class="card preset-filled-surface-100-900 border-[1px] border-surface-200-800 card-hover divide-surface-200-800 block max-w-md divide-y overflow-hidden"
-        {href}
 >
-    <header>
-        <img alt="banner" class="w-full" src={img}/>
-    </header>
-    <article class="space-y-4 p-4">
-        <div>
-            <h2 class="h3">{roomLabel}</h2>
-        </div>
-        <p class="opacity-60">
-            {description}
-        </p>
-    </article>
+    <a {href}>
+        <header>
+            <img alt="banner" class="w-full" src={img}/>
+        </header>
+        <article class="space-y-4 p-4">
+            <div>
+                <h2 class="h3">{roomLabel}</h2>
+            </div>
+            <p class="opacity-60">
+                {description}
+            </p>
+        </article>
+    </a>
     <footer class="flex items-center justify-between gap-4 p-4">
         {#if loading}
             <p class="empty">Chargement des créneaux...</p>
@@ -56,15 +47,13 @@
             <ul class="slots">
                 {#each slots as slot}
                     <li class="slot">
-                        <button type="button" onclick={() => handleClick(slot)}>
-                            {formatTime(slot.start)}
-                        </button>
+                        <CreneauButton {selectedDate} selectedRoom={roomLabel} time={slot.start}/>
                     </li>
                 {/each}
             </ul>
         {/if}
     </footer>
-</a>
+</div>
 
 <style>
     .slots {

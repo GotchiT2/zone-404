@@ -6,14 +6,6 @@
 
   type CalendarKey = 'salle1' | 'salle2' | 'salle3';
 
-  type SlotWithCalendar = {
-    id: string;
-    title: string;
-    start: string;
-    end: string;
-    calendar: CalendarKey;
-  };
-
   let selectedDate = $state('');
   let allSlots = $state<SlotWithCalendar[]>([]);
   let loading = $state(false);
@@ -44,32 +36,6 @@
     }
     fetchSlots(selectedDate);
   });
-
-  let slotsSalle1 = $derived(allSlots.filter((s) => s.calendar === 'salle1'));
-  let slotsSalle2 = $derived(allSlots.filter((s) => s.calendar === 'salle2'));
-  let slotsSalle3 = $derived(allSlots.filter((s) => s.calendar === 'salle3'));
-
-  let showModal = $state(false);
-  let modalSlot: SlotWithCalendar | null = $state(null);
-  let modalPlayers = $state(2);
-  let modalLoading = $state(false);
-  let modalError = $state<string | null>(null);
-
-  function handleSelectSlot(calendarKey: CalendarKey, slot: any) {
-    modalSlot = {...slot, calendar: calendarKey};
-    modalPlayers = 2;
-    modalError = null;
-    showModal = true;
-  }
-
-  function formatTime(iso: string): string {
-    if (!iso) return '';
-    const date = new Date(iso);
-    return date.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
 
   async function confirmModal() {
     if (!modalSlot) return;
@@ -110,6 +76,10 @@
       modalLoading = false;
     }
   }
+
+  let slotsSalle1 = $derived(allSlots.filter((s) => s.calendar === 'salle1'));
+  let slotsSalle2 = $derived(allSlots.filter((s) => s.calendar === 'salle2'));
+  let slotsSalle3 = $derived(allSlots.filter((s) => s.calendar === 'salle3'));
 </script>
 
 <div class="w-auto h-full overflow-scroll flex flex-col items-center">
@@ -136,10 +106,10 @@
                 Planning des salles
             </h2>
 
-            <label class="text-white">
+            <label class="text-white flex items-center gap-4">
                 {#if loading}
                     <Progress class="items-center w-fit" value={null}>
-                        <Progress.Circle>
+                        <Progress.Circle class="[--size:--spacing(12)]">
                             <Progress.CircleTrack/>
                             <Progress.CircleRange/>
                         </Progress.Circle>
@@ -161,7 +131,6 @@
                     href="/escape-kids"
                     img="/escape-kids-thumbnail.png"
                     {loading}
-                    onSelectSlot={handleSelectSlot}
                     roomLabel="Escape Kids : À la recherche du trésor de la jungle"
                     slots={slotsSalle1}
             />
@@ -171,7 +140,6 @@
                     href="/escape-kids"
                     img="/tatoueur-thumbnail.png"
                     {loading}
-                    onSelectSlot={handleSelectSlot}
                     roomLabel="Le Tatoueur Maudit : enquête dans un cabinet inquiétant"
                     slots={slotsSalle2}
             />
@@ -181,7 +149,6 @@
                     href="/escape-kids"
                     img="/labo-thumbnail.png"
                     {loading}
-                    onSelectSlot={handleSelectSlot}
                     roomLabel="Le Laboratoire de l’Extinction"
                     slots={slotsSalle3}
             />
@@ -229,44 +196,6 @@
 
     <InfosPratiques/>
 </div>
-
-{#if showModal && modalSlot}
-    <div class="modal-backdrop">
-        <div class="modal">
-            <h2>Réservation en cours</h2>
-            <p>
-                Salle : {modalSlot.calendar}<br/>
-                Date : {selectedDate}<br/>
-                Heure : {formatTime(modalSlot.start)}
-            </p>
-
-            <label>
-                Nombre de joueurs (2 à 6) :
-                <input
-                        type="number"
-                        min="2"
-                        max="6"
-                        bind:value={modalPlayers}
-                />
-            </label>
-
-            {#if modalError}
-                <p class="error">{modalError}</p>
-            {/if}
-
-            <div class="modal-actions">
-                <button type="button" on:click={() => (showModal = false)} disabled={modalLoading}>
-                    Annuler
-                </button>
-                <button type="button" on:click={confirmModal} disabled={modalLoading}>
-                    {#if modalLoading}Validation...{/if}
-                    {#if !modalLoading}Valider{/if}
-                </button>
-            </div>
-        </div>
-    </div>
-{/if}
-
 
 <style>
     .grid {
