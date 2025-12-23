@@ -1,161 +1,57 @@
 <script lang="ts">
   import SalleCard from '$lib/components/SalleCard.svelte';
-  import Logo from '$lib/components/Logo.svelte';
-  import {Progress} from '@skeletonlabs/skeleton-svelte';
   import InfosPratiques from "$lib/components/InfosPratiques.svelte";
-
-  type CalendarKey = 'salle1' | 'salle2' | 'salle3';
-
-  let selectedDate = $state('');
-  let allSlots = $state<SlotWithCalendar[]>([]);
-  let loading = $state(false);
-  let error = $state<string | null>(null);
-
-  async function fetchSlots(date: string) {
-    loading = true;
-    error = null;
-    try {
-      const res = await fetch(`/api/calendar/slots/${date}`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Erreur lors du chargement des créneaux');
-      }
-      allSlots = await res.json();
-    } catch (e) {
-      error = (e as Error).message;
-      allSlots = [];
-    } finally {
-      loading = false;
-    }
-  }
-
-  $effect(() => {
-    if (!selectedDate) {
-      allSlots = [];
-      return;
-    }
-    fetchSlots(selectedDate);
-  });
-
-  async function confirmModal() {
-    if (!modalSlot) return;
-    if (modalPlayers < 2 || modalPlayers > 6) {
-      modalError = 'Le nombre de joueurs doit être compris entre 2 et 6';
-      return;
-    }
-
-    modalLoading = true;
-    modalError = null;
-
-    try {
-      const res = await fetch(
-        `/api/calendar/${modalSlot.calendar}/start-reservation`,
-        {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            slotId: modalSlot.id,
-            players: modalPlayers
-          })
-        }
-      );
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Erreur lors du démarrage de la réservation');
-      }
-
-      // On retire le créneau de la liste puisqu’il n’est plus [LIBRE]
-      allSlots = allSlots.filter((s) => s.id !== modalSlot?.id);
-
-      showModal = false;
-      modalSlot = null;
-    } catch (e) {
-      modalError = (e as Error).message;
-    } finally {
-      modalLoading = false;
-    }
-  }
-
-  let slotsSalle1 = $derived(allSlots.filter((s) => s.calendar === 'salle1'));
-  let slotsSalle2 = $derived(allSlots.filter((s) => s.calendar === 'salle2'));
-  let slotsSalle3 = $derived(allSlots.filter((s) => s.calendar === 'salle3'));
+  import Hero from "$lib/components/Hero.svelte";
+  import Separator from "$lib/components/Separator.svelte";
+  import Footer from "$lib/components/Footer.svelte";
 </script>
 
 <div class="w-auto h-full overflow-scroll flex flex-col items-center">
-    <div class="relative w-full">
-        <video autoplay class="w-full h-full mask-b-from-60% mask-b-to-100%" loop playsinline src="/plop.webm"></video>
-        <div class="absolute top-0 w-full h-full bg-[#00000080] flex items-center justify-center flex-col gap-4 p-4 text-center">
-            <h1 class="h1 text-white">
-                <Logo classname="w-128 mx-auto"/>
-                <span class="sr-only">Zone 404</span>
-            </h1>
+    <Hero/>
 
-            <h2 class="h2 text-white">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quidem.
-            </h2>
+    <Separator/>
 
-            <button class="btn preset-outlined-surface-500 mt-16" type="button">Découvrir nos offres</button>
-        </div>
-    </div>
 
-    <section class="w-full bg-black p-8">
+    <section class="w-full bg-black p-8" id="salles">
 
         <div class="flex flex-col items-center justify-center gap-4 mb-8">
-            <h2 class="h2 text-white mb-8">
-                Planning des salles
+            <h2 class="h2 bg-blue-400 px-4 py-2 text-white my-16 shadow-md shadow-blue-500/50">
+                Nos salles
             </h2>
-
-            <label class="text-white flex items-center gap-4">
-                {#if loading}
-                    <Progress class="items-center w-fit" value={null}>
-                        <Progress.Circle class="[--size:--spacing(12)]">
-                            <Progress.CircleTrack/>
-                            <Progress.CircleRange/>
-                        </Progress.Circle>
-                        <Progress.ValueText/>
-                    </Progress>
-                {/if}
-                Sélectionnez une date :
-                <input
-                        bind:value={selectedDate}
-                        class="bg-transparent border border-white rounded px-2 py-1 ml-2 text-white"
-                        type="date"
-                />
-            </label>
         </div>
 
-        <div class="flex mx-auto w-full justify-center gap-8 my-16">
+        <div class="flex mx-auto w-full justify-center gap-8 mb-16">
             <SalleCard
                     description="Plongez vos enfants dans un escape game jungle ludique et immersif ! En équipe de 2 à 6, les explorateurs de moins de 8 ans devront résoudre de petites énigmes et retrouver le trésor caché. Une aventure idéale pour une première expérience d’escape game."
                     href="/escape-kids"
                     img="/escape-kids-thumbnail.png"
-                    {loading}
                     roomLabel="Escape Kids : À la recherche du trésor de la jungle"
-                    slots={slotsSalle1}
-            />
+            >
+                <div class="flex gap-4"><span class="badge preset-filled-primary-500">De 4 à 8 ans</span><span
+                        class="badge preset-filled-primary-500">Accompagnateur obligatoire</span></div>
+            </SalleCard>
 
             <SalleCard
                     description="Osez ce escape game thriller pour 2 à 6 joueurs à partir de 16 ans. Fouillez le cabinet d’un tatoueur dérangé, rassemblez les preuves d’une série de meurtres et effacez toute trace de votre passage. Une enquête intense pour amateurs de sensations fortes."
                     href="/escape-kids"
                     img="/tatoueur-thumbnail.png"
-                    {loading}
                     roomLabel="Le Tatoueur Maudit : enquête dans un cabinet inquiétant"
-                    slots={slotsSalle2}
-            />
+            >
+                <div class="flex gap-4"><span class="badge preset-filled-primary-500">À partir de 16 ans</span></div>
+            </SalleCard>
 
             <SalleCard
                     description="Dans ce escape game futuriste, vous êtes les derniers espoirs de l’humanité. Explorez un laboratoire abandonné, analysez les indices et reconstituez l’antidote du virus qui a décimé 99,6 % de la population. Survivrez-vous… ou succomberez comme les autres ?"
                     href="/escape-kids"
                     img="/labo-thumbnail.png"
-                    {loading}
                     roomLabel="Le Laboratoire de l’Extinction"
-                    slots={slotsSalle3}
-            />
+            >
+                <div class="flex gap-4"><span class="badge preset-filled-primary-500">À partir de 12 ans</span></div>
+            </SalleCard>
         </div>
     </section>
 
-    <section class="w-full bg-blue-400 p-8 my-16 shadow-lg shadow-blue-500/50 ">
+    <section class="w-full bg-blue-400 p-8 mt-16 shadow-lg shadow-blue-500/50 ">
         <div class="flex flex-col items-center justify-center gap-4 mb-8 text-black">
             <h2 class="h2 text-center mb-4">
                 Réservez<br/><span class="font-extrabold">un escape game</span>
@@ -164,17 +60,18 @@
             <p>Choisissez votre créneau dès maintenant <span class="bg-black text-blue-400 font-bold p-2">à partir de XX€ par joueur !</span>
             </p>
 
-            <button class="btn btn-lg  preset-tonal-surface mt-4" type="button">Réserver maintenant</button>
+            <a class="btn btn-lg  preset-tonal-surface mt-4" href="/reservation">Réserver maintenant</a>
         </div>
     </section>
 
-    <section class="w-full bg-black p-8 my-16">
+
+    <section class="w-full bg-white py-32 px-8" id="offres">
         <div class="flex flex-col items-center justify-center gap-4 mb-8">
-            <h2 class="h2 text-white text-center mb-4">
+            <h2 class="h2 bg-blue-400 px-4 py-2 text-white mb-8 shadow-md shadow-blue-500/50 text-center">
                 Découvrez<br/><span class="font-extrabold">nos formules</span>
             </h2>
 
-            <div class="w-1/2 grid grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 grid-rows-2 mx-auto gap-4 items-center justify-center">
                 <div class="card text-center font-bold aspect-video flex justify-center items-center bg-[url(formule-anniversaire-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
                     <h3 class="h3 shadow-2xl">Formule anniversaire</h3>
                 </div>
@@ -183,18 +80,22 @@
                     <h3 class="h3">Réservez autant de parties que vous le voulez !</h3>
                 </div>
 
-                <div class="card text-center font-bold aspect-video flex justify-center items-center bg-[url(team-building-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+                <div class="row-start-2 card text-center font-bold aspect-video flex justify-center items-center bg-[url(team-building-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
                     <h3 class="h3">Formule entreprise</h3>
                 </div>
 
-                <div class="card text-center font-bold aspect-video flex justify-center items-center bg-[url(escape-game-nature-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+                <div class="row-start-2 card text-center font-bold aspect-video flex justify-center items-center bg-[url(escape-game-nature-2.png)] bg-cover hover:shadow-2xl opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
                     <h3 class="h3">Escape game nature</h3>
                 </div>
             </div>
         </div>
     </section>
 
+    <Separator/>
+
     <InfosPratiques/>
+
+    <Footer/>
 </div>
 
 <style>

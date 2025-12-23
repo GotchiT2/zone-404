@@ -1,6 +1,8 @@
 node_modules
 config
 
+.idea
+
 # Output
 .output
 .vercel

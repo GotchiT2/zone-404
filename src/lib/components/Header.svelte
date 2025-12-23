@@ -23,7 +23,7 @@
                 <CupSoda class="size-5"/>
                 <span class="text-xs">Espace bar</span>
             </a>
-            <a class={anchorRail} href='/infos-pratiques'>
+            <a class={anchorRail} href='/#infos-pratiques'>
                 <MessageCircleQuestionMark class="size-5"/>
                 <span class="text-xs">Infos pratiques</span>
             </a>

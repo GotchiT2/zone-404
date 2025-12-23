@@ -63,11 +63,10 @@
     #osm-map {
         width: 400px;
         height: 400px;
-        border-radius: 12px;
     }
 </style>
 
 <!-- Wrapper adapté à Skeleton (arrondi + border) -->
-<div class="rounded-xl border border-surface-200 overflow-hidden shadow-xl">
+<div class="border border-surface-200 overflow-hidden shadow-xl">
     <div id="osm-map"></div>
 </div>
