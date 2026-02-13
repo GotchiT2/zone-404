@@ -2,6 +2,8 @@
   import {CupSoda, MailPlus, MessageCircleQuestionMark, PhoneCall, TicketPlus, XIcon} from '@lucide/svelte';
   import {Dialog, Navigation, Portal} from '@skeletonlabs/skeleton-svelte';
   import Logo from "$lib/components/Logo.svelte";
+  import {PUBLIC_AFFICHER_ESPACE_BAR} from '$env/static/public';
+
 
   let anchorRail = 'btn hover:preset-tonal aspect-square w-full max-w-[84px] flex flex-col items-center gap-0.5';
 </script>
@@ -19,10 +21,12 @@
                 <TicketPlus class="size-5"/>
                 <span class="text-xs">Réserver</span>
             </a>
-            <a class={anchorRail} href='/bar'>
-                <CupSoda class="size-5"/>
-                <span class="text-xs">Espace bar</span>
-            </a>
+            {#if PUBLIC_AFFICHER_ESPACE_BAR === 'true' }
+                <a class={anchorRail} href='/bar'>
+                    <CupSoda class="size-5"/>
+                    <span class="text-xs">Espace bar</span>
+                </a>
+            {/if}
             <a class={anchorRail} href='/#infos-pratiques'>
                 <MessageCircleQuestionMark class="size-5"/>
                 <span class="text-xs">Infos pratiques</span>
@@ -45,14 +49,15 @@
                             <Dialog.Description>
                                 <a class="flex items-center gap-2 mb-4 text-blue-400 font-bold hover:underline" href="">
                                     <PhoneCall aria-hidden="true" class="size-8" focusable="false"/>
+                                    <span class="sr-only">Par téléphone: </span>
                                     06.00.00.00.00
                                 </a>
-                                <a class="flex items-center gap-2 mb-4 text-blue-400 font-bold hover:underline" href="">
+                                <a class="flex items-center gap-2 mb-4 text-blue-400 font-bold hover:underline"
+                                   href="mailto:zone404team@gmail.com">
                                     <MailPlus class="size-8"/>
+                                    <span class="sr-only">Par email: </span>
                                     zone404team@gmail.com
                                 </a>
-                                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-                                incididunt ut labore et dolore magna aliqua.
                             </Dialog.Description>
                         </Dialog.Content>
                     </Dialog.Positioner>

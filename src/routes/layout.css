@@ -9,3 +9,7 @@
 @import '../zone404.css';
 
 @import "leaflet/dist/leaflet.css";
+
+html, body {
+    scroll-behavior: smooth;
+}

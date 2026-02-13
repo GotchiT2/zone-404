@@ -3,7 +3,7 @@
     import Logo from "$lib/components/Logo.svelte";
 </script>
 
-<footer class="w-full mt-16 bg-blue-400" role="contentinfo">
+<footer class="w-full bg-blue-400" role="contentinfo">
     <nav class="text-white">
         <ul class="flex flex-col items-center md:items-start">
             <li class="mb-1"><a class="hover:underline hover:text-black transition-all" href="/mentions-legales">Mentions
@@ -36,7 +36,7 @@
             <li>
                 <a
                         aria-label="Page Instagram de Zone404 (lien externe)"
-                        href="https://www.instagram.com/"
+                        href="https://www.instagram.com/zone404_beaurainville/"
                         rel="noopener noreferrer"
                         target="_blank"
                 >
@@ -51,33 +51,33 @@
             </li>
 
 
-            <li>
-                <a
-                        aria-label="Compte Tiktok de Zone404 (lien externe)"
-                        href="https://www.tiktok.com/"
-                        rel="noopener noreferrer"
-                        target="_blank"
-                >
-                    <span class="sr-only">Compte Tiktok de Zone404 (lien externe)</span>
-                    <SVG class="h-8 w-8" viewBox="0 0 512 512">
-                        <path
-                                d="M448 209.9a210.1 210.1 0 0 1 -122.8-39.3V349.4A162.6 162.6 0 1 1 185 188.3V278.2a74.6 74.6 0 1 0 52.2 71.2V0l88 0a121.2 121.2 0 0 0 1.9 22.2h0A122.2 122.2 0 0 0 381 102.4a121.4 121.4 0 0 0 67 20.1z"
-                        />
-                    </SVG>
-                </a>
-            </li>
+            <!--            <li>-->
+            <!--                <a-->
+            <!--                        aria-label="Compte Tiktok de Zone404 (lien externe)"-->
+            <!--                        href="https://www.tiktok.com/"-->
+            <!--                        rel="noopener noreferrer"-->
+            <!--                        target="_blank"-->
+            <!--                >-->
+            <!--                    <span class="sr-only">Compte Tiktok de Zone404 (lien externe)</span>-->
+            <!--                    <SVG class="h-8 w-8" viewBox="0 0 512 512">-->
+            <!--                        <path-->
+            <!--                                d="M448 209.9a210.1 210.1 0 0 1 -122.8-39.3V349.4A162.6 162.6 0 1 1 185 188.3V278.2a74.6 74.6 0 1 0 52.2 71.2V0l88 0a121.2 121.2 0 0 0 1.9 22.2h0A122.2 122.2 0 0 0 381 102.4a121.4 121.4 0 0 0 67 20.1z"-->
+            <!--                        />-->
+            <!--                    </SVG>-->
+            <!--                </a>-->
+            <!--            </li>-->
         </ul>
     </nav>
 
     <div class="flex flex-col items-center md:items-start">
-        <Logo classname="w-64"/>
+        <Logo classname="w-32 md:w-64"/>
         <p class="mt-2">&copy;Zone404 2025 - Tous droits réservés</p>
     </div>
 </footer>
 
 <style>
     footer {
-        padding: 2rem 1em;
+        padding: 2rem 1em 4em 1em;
         display: flex;
         align-items: center;
         flex-direction: column;
@@ -87,6 +87,7 @@
 
     @media (min-width: 600px) {
         footer {
+            padding: 2rem 1em;
             flex-direction: row;
             justify-content: space-around;
             align-items: center;

@@ -4,78 +4,93 @@
     import {Accordion} from '@skeletonlabs/skeleton-svelte';
     import {slide} from 'svelte/transition';
 
-    const stickers = [
-        "📍 Situés au cœur des 7 vallées",
-        "À 25 min de Berck",
-        "À 30 min du Touquet",
-        "À 5 min de Campagne-lès-Hesdin",
-        "À 15 min de Montreuil-sur-Mer",
-    ];
-
     const items = [
         {
             id: '1',
-            title: 'Your skeleton is made of more than 200 bones',
+            title: 'Comment se rendre sur place ?',
             description:
-                'Inside your body are 206 bones. Each bone plays a very important role in making all the mechanics of your body function properly. If a bone is broken, all the bones around it can’t perform their duty properly.',
+                'Nous sommes situés au 138 Grande Rue, 62990 Beaurainville. Un parking gratuit est disponible à proximité pour nos visiteurs. Nous sommes situés au cœur des 7 vallées, à seulement 25 minutes de Berck, 30 minutes du Touquet, 5 minutes de Campagne-lès-Hesdin et 15 minutes de Montreuil-sur-Mer.',
         },
         {
             id: '2',
-            title: 'The smallest bone in the body is in your ear',
+            title: 'Quels moyens de paiement sont acceptés ?',
             description:
-                'The stapes, a bone in your inner ear, is the smallest of all your bones. This bone is also sometimes called the stirrup because of its Y shape. Together with the anvil and hammer bones, the stapes helps translate sounds you hear into waves your brain can understand.',
+                'En ligne, nous acceptons les paiements par carte bancaire. Sur place, nous acceptons les paiements en espèces, par carte bancaire ou en chèques vacances.',
         },
         {
             id: '3',
-            title: 'One bone isn’t connected to any other bones',
+            title: 'Combien de joueurs sont autorisés par salle ?',
             description:
-                'The hyoid bone, which is in your throat, is the only bone that doesn’t connect to a joint. The hyoid is responsible for holding your tongue in place.',
+                'Chaque salle peut accueillir de 2 à 6 joueurs. Pour l’Escape Kids, la salle accepte jusqu’à 6 personnes incluant les accompagnateurs.',
         },
+        {
+            id: '4',
+            title: 'Y a-t-il des restrictions d’âge pour participer ?',
+            description:
+                'Oui, certaines salles ont des restrictions d’âge. L’Escape Kids est conçu pour les enfants de 4 à 8 ans, accompagnés d’un adulte. Le Tatoueur Maudit est réservé aux joueurs de 16 ans et plus, tandis que le Laboratoire de l’Extinction est accessible à partir de 12 ans.',
+        },
+        {
+            id: '5',
+            title: 'Proposez-vous des options pour les groupes ou les événements spéciaux ?',
+            description:
+                'Oui, nous proposons des options spéciales pour les groupes, les anniversaires et les événements d’entreprise. Veuillez nous contacter directement pour discuter de vos besoins spécifiques et organiser une expérience personnalisée, ou rendez-vous dans la section "Nos Formules" pour consulter le détail.',
+        },
+        {
+            id: '6',
+            title: 'Quels sont vos horaires d’ouverture ?',
+            description:
+                'En temps normal, nous sommes ouverts le lundi de 16h à 22h, le mercredi de 13h à 22h, le jeudi de 16h à 22h, le vendredi de 16h à 01h, le samedi de 10h à 01h et le dimanche de 11h à 20h.',
+        },
+        {
+            id: '7',
+            title: 'Que faire si je ne trouve pas de créneau qui me corresponde ?',
+            description:
+                'Nous sommes joignables par téléphone. Appelez-nous au 06.00.00.00.00 et nous ferons de notre mieux pour vous accommoder en fonction de vos disponibilités.',
+        }
     ];
 </script>
 
 <section class="w-full bg-black p-8 my-16" id="infos-pratiques">
     <div class="flex flex-col items-center justify-center gap-4 mb-8">
-        <h2 class="h2 bg-blue-400 px-4 py-2 text-white mb-8 shadow-md shadow-blue-500/50 text-center font-extrabold">
+        <h2 class="h2 bg-blue-400 px-4 py-2 text-white mb-8 shadow-lg shadow-blue-500/50 text-center font-extrabold">
             Infos pratiques
         </h2>
     </div>
 
-    <div class="flex items-center justify-center gap-8">
-        <!--        <div class="flex flex-col gap-6">-->
-        <!--            <CatchyStickers items={stickers}/>-->
-        <!--        </div>-->
-
+    <div class="flex flex-col md:flex-row items-center justify-center gap-8">
         <div class="overflow-hidden shadow-xl border border-surface-200">
             <Map address="138 Grande Rue, Beaurainville" zoom={12}/>
         </div>
 
-        <Accordion>
-            {#each items as item, i (item)}
-                {#if i !== 0}
-                    <hr class="hr"/>
-                {/if}
-                <Accordion.Item value={item.id}>
-                    <h3>
-                        <Accordion.ItemTrigger class="font-bold flex items-center justify-between gap-2">
-                            {item.title}
-                            <Accordion.ItemIndicator class="group">
-                                <ChevronDownIcon class="h-5 w-5 transition group-data-[state=open]:rotate-180"/>
-                            </Accordion.ItemIndicator>
-                        </Accordion.ItemTrigger>
-                    </h3>
-                    <Accordion.ItemContent>
-                        {#snippet element(attributes)}
-                            {#if !attributes.hidden}
-                                <div {...attributes} transition:slide={{ duration: 150 }}>
-                                    {item.description}
-                                </div>
-                            {/if}
-                        {/snippet}
-                    </Accordion.ItemContent>
-                </Accordion.Item>
-            {/each}
-        </Accordion>
+        <div class="md:w-1/2">
+            <Accordion>
+                {#each items as item, i (item)}
+                    {#if i !== 0}
+                        <hr class="hr"/>
+                    {/if}
+                    <Accordion.Item value={item.id}>
+                        <h3>
+                            <Accordion.ItemTrigger class="font-bold flex items-center justify-between gap-2">
+                                {item.title}
+                                <Accordion.ItemIndicator class="group">
+                                    <ChevronDownIcon class="h-5 w-5 transition group-data-[state=open]:rotate-180"/>
+                                </Accordion.ItemIndicator>
+                            </Accordion.ItemTrigger>
+                        </h3>
+                        <Accordion.ItemContent>
+                            {#snippet element(attributes)}
+                                {#if !attributes.hidden}
+                                    <div {...attributes} transition:slide={{ duration: 150 }}>
+                                        {item.description}
+                                    </div>
+                                {/if}
+                            {/snippet}
+                        </Accordion.ItemContent>
+                    </Accordion.Item>
+                {/each}
+            </Accordion>
+        </div>
+
         <!--        <div class="px-6 py-3 text-lg font-semibold shadow-md shadow-blue-500 w-fit whitespace-nowrap-->
         <!--         border bg-white">-->
         <!--            <h3 class="text-xl font-semibold mb-3 text-black">🕒 Horaires d’ouverture</h3>-->
