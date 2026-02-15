@@ -23,6 +23,9 @@ importers:
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
+      prisma:
+        specifier: ^6.2.0
+        version: 6.19.2(typescript@5.9.3)
       svelte-typewrite:
         specifier: ^3.0.0
         version: 3.0.0(svelte@5.45.6)
@@ -84,9 +87,6 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.7.1
         version: 0.7.2(prettier-plugin-svelte@3.4.0(prettier@3.7.4)(svelte@5.45.6))(prettier@3.7.4)
-      prisma:
-        specifier: ^6.2.0
-        version: 6.19.2(typescript@5.9.3)
       svelte:
         specifier: ^5.41.0
         version: 5.45.6
