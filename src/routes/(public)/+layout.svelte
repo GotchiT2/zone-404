@@ -1,5 +1,5 @@
 <script lang="ts">
-  import './layout.css';
+  import '../layout.css';
   import favicon from '$lib/assets/favicon.svg';
   import Header from "$lib/components/Header.svelte";
   import HeaderMobile from "$lib/components/HeaderMobile.svelte";
@@ -32,7 +32,7 @@
 
     <div class="w-auto h-full overflow-scroll flex flex-col items-center">
         {@render children()}
-        
+
         <Footer/>
     </div>
 

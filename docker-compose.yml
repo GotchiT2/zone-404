@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zone404_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zone404
+      POSTGRES_PASSWORD: zone404_password
+      POSTGRES_DB: zone404_monitoring
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zone404 -d zone404_monitoring"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local

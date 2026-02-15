@@ -1,0 +1,107 @@
+// Prisma schema for Zone404 Escape Game Monitoring
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Salle d'escape game
+model Room {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique // "salle-1", "salle-2", "salle-3"
+  name      String   // "Salle 1", "Salle 2", "Salle 3"
+  trialCount Int     // 10, 12, 8
+  defaultTimerDurationMs Int @default(3600000) // 60 minutes par défaut
+  createdAt DateTime @default(now())
+  
+  trials    Trial[]
+  runs      Run[]
+  messages  RoomMessage[]
+}
+
+// Épreuve dans une salle
+model Trial {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  index     Int      // 1, 2, 3, ... (numéro de l'épreuve)
+  label     String   // "Épreuve 1", "Épreuve 2", etc.
+  createdAt DateTime @default(now())
+  
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  statuses  RunTrialStatus[]
+  
+  @@unique([roomId, index])
+  @@index([roomId])
+}
+
+// Une partie/session de jeu pour une salle
+model Run {
+  id        Int       @id @default(autoincrement())
+  roomId    Int
+  startedAt DateTime  @default(now())
+  endedAt   DateTime? // null = run courante, non-null = terminée
+  
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  statuses  RunTrialStatus[]
+  timer     RunTimer?
+  messages  RoomMessage[]
+  
+  @@index([roomId, endedAt])
+}
+
+// Statut de validation d'une épreuve pour une run donnée
+model RunTrialStatus {
+  id          Int       @id @default(autoincrement())
+  runId       Int
+  trialId     Int
+  validated   Boolean   @default(false)
+  validatedAt DateTime?
+  
+  run         Run       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  trial       Trial     @relation(fields: [trialId], references: [id], onDelete: Cascade)
+  
+  @@unique([runId, trialId])
+  @@index([runId])
+}
+
+enum TimerState {
+  IDLE     // Pas démarré
+  RUNNING  // En cours
+  PAUSED   // En pause
+  ENDED    // Terminé (temps écoulé)
+}
+
+// Timer pour une run (compte à rebours)
+model RunTimer {
+  id                    Int        @id @default(autoincrement())
+  runId                 Int        @unique
+  durationMs            Int        // Durée totale du timer (ex: 3600000 = 60 min)
+  state                 TimerState @default(IDLE)
+  startedAt             DateTime?  // Quand le timer a été démarré
+  pausedAt              DateTime?  // Quand le timer a été mis en pause
+  accumulatedPausedMs   Int        @default(0) // Cumul du temps passé en pause
+  updatedAt             DateTime   @updatedAt
+  
+  run                   Run        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  
+  @@index([runId])
+}
+
+// Message du GM aux joueurs
+model RoomMessage {
+  id        String   @id @default(uuid())
+  roomId    Int
+  runId     Int
+  text      String   // Contenu du message (max 500 caractères)
+  createdBy String   @default("GM")
+  createdAt DateTime @default(now())
+  
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  run       Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId, runId])
+  @@index([runId])
+}
