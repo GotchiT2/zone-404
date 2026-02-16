@@ -33,6 +33,7 @@
 		messageText: string;
 		isSendingMessage: boolean;
 		messageError: string;
+		isExpanded: boolean;
 	}
 
 	// État pour chaque salle
@@ -41,7 +42,8 @@
 		displayTime: '--:--',
 		messageText: '',
 		isSendingMessage: false,
-		messageError: ''
+		messageError: '',
+		isExpanded: true
 	})));
 
 	const MAX_MESSAGE_LENGTH = 500;
@@ -152,6 +154,10 @@
 		}
 	}
 
+	function toggleExpanded(roomIndex: number) {
+		rooms[roomIndex].isExpanded = !rooms[roomIndex].isExpanded;
+	}
+
 	async function logout() {
 		await fetch('/gm/logout', { method: 'POST' });
 		goto('/gm/login');
@@ -258,24 +264,42 @@
 	</div>
 
 	<!-- Rooms Grid -->
-	<div class="flex gap-4">
+	<div class="flex flex-col lg:flex-row gap-4">
 		{#each rooms as room, roomIndex (room.roomId)}
-			<div class="card p-5 shadow-xl border-2 border-primary-500/30 space-y-4">
+			<div class="card p-5 shadow-xl border-2 border-primary-500/30 space-y-4 flex-1">
 				<!-- Room Header -->
 				<div class="flex justify-between items-center">
-					<h2 class="h3 font-bold">
-						{room.roomName}
-					</h2>
-					<a href="/gm/{room.roomId}" class="chip preset-filled-secondary-500 hover:preset-filled-primary-500 transition-all">
+					<div class="flex items-center gap-3">
+						<button
+							class="btn btn-sm preset-tonal-surface"
+							onclick={() => toggleExpanded(roomIndex)}
+							aria-label={room.isExpanded ? 'Collapse' : 'Expand'}
+						>
+							<svg 
+								class="w-5 h-5 transition-transform duration-200" 
+								class:rotate-180={!room.isExpanded}
+								fill="none" 
+								stroke="currentColor" 
+								viewBox="0 0 24 24"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+							</svg>
+						</button>
+						<h2 class="h3 font-bold">
+							{room.roomName}
+						</h2>
+					</div>
+					<a href="/admin/gm/{room.roomId}" class="chip preset-filled-secondary-500 hover:preset-filled-primary-500 transition-all">
 						Détails →
 					</a>
 				</div>
 
-				{#if room.error}
-					<div class="alert preset-filled-warning-500">
-						<p class="font-semibold">⚠️ {room.error}</p>
-					</div>
-				{:else}
+				{#if room.isExpanded}
+					{#if room.error}
+						<div class="alert preset-filled-warning-500">
+							<p class="font-semibold">⚠️ {room.error}</p>
+						</div>
+					{:else}
 					<!-- Progress -->
 					{@const validatedCount = room.trials?.filter(t => t.validated).length || 0}
 					{@const totalCount = room.trials?.length || 0}
@@ -395,15 +419,16 @@
 					{/if}
 				</div>
 
-					<!-- Actions -->
-					<div class="pt-2 border-t border-surface-600">
-						<button
-							class="btn preset-filled-error-500 w-full btn-sm"
-							onclick={() => resetRun(room.roomId, room.roomName)}
-						>
-							🔄 Reset Session
-						</button>
-					</div>
+						<!-- Actions -->
+						<div class="pt-2 border-t border-surface-600">
+							<button
+								class="btn preset-filled-error-500 w-full btn-sm"
+								onclick={() => resetRun(room.roomId, room.roomName)}
+							>
+								🔄 Reset Session
+							</button>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		{/each}
