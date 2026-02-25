@@ -257,6 +257,7 @@
 
 <svelte:head>
     <title>Display - {roomId}</title>
+    <meta name="google" content="notranslate">
 </svelte:head>
 
 <div class="display-container">
