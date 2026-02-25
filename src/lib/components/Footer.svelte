@@ -19,7 +19,7 @@
             <li>
                 <a
                         aria-label="Page Facebook de Zone404 (lien externe)"
-                        href="https://www.facebook.com/"
+                        href="https://www.facebook.com/zone404.beaurainville"
                         rel="noopener noreferrer"
                         target="_blank"
                 >

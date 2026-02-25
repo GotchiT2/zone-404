@@ -1,14 +1,15 @@
-@import 'tailwindcss';
-
-@plugin '@tailwindcss/forms';
-
 @import '@skeletonlabs/skeleton';
 @import '@skeletonlabs/skeleton-svelte';
-@import '@skeletonlabs/skeleton/themes/cerberus';
+
+@import "leaflet/dist/leaflet.css";
+
+@import 'tailwindcss';
 
 @import '../zone404.css';
 
-@import "leaflet/dist/leaflet.css";
+:root {
+color-scheme: dark;
+}
 
 html, body {
     scroll-behavior: smooth;

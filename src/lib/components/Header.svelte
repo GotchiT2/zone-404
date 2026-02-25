@@ -50,7 +50,7 @@
                                 <a class="flex items-center gap-2 mb-4 text-blue-400 font-bold hover:underline" href="">
                                     <PhoneCall aria-hidden="true" class="size-8" focusable="false"/>
                                     <span class="sr-only">Par téléphone: </span>
-                                    06.00.00.00.00
+                                    06.72.82.08.92
                                 </a>
                                 <a class="flex items-center gap-2 mb-4 text-blue-400 font-bold hover:underline"
                                    href="mailto:zone404team@gmail.com">

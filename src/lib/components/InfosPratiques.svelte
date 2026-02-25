@@ -27,7 +27,7 @@
             id: '4',
             title: 'Y a-t-il des restrictions d’âge pour participer ?',
             description:
-                'Oui, certaines salles ont des restrictions d’âge. L’Escape Kids est conçu pour les enfants de 4 à 8 ans, accompagnés d’un adulte. Le Tatoueur Maudit est réservé aux joueurs de 16 ans et plus, tandis que le Laboratoire de l’Extinction est accessible à partir de 12 ans.',
+                'Oui, certaines salles ont des restrictions d’âge. L’Escape Kids est conçu pour les enfants de 4 à 8 ans, accompagnés d’un adulte. Le Tatoueur Maudit est réservé aux joueurs de 15 ans et plus, tandis que le Laboratoire de l’Extinction est accessible à partir de 10 ans.',
         },
         {
             id: '5',
@@ -45,16 +45,56 @@
             id: '7',
             title: 'Que faire si je ne trouve pas de créneau qui me corresponde ?',
             description:
-                'Nous sommes joignables par téléphone. Appelez-nous au 06.00.00.00.00 et nous ferons de notre mieux pour vous accommoder en fonction de vos disponibilités.',
+                'Nous sommes joignables par téléphone. Appelez-nous au 06.72.82.08.92 et nous ferons de notre mieux pour vous accommoder en fonction de vos disponibilités.',
         }
     ];
 </script>
 
-<section class="w-full bg-black p-8 my-16" id="infos-pratiques">
+<section class="w-full bg-black px-8 py-16" id="infos-pratiques">
     <div class="flex flex-col items-center justify-center gap-4 mb-8">
         <h2 class="h2 bg-blue-400 px-4 py-2 text-white mb-8 shadow-lg shadow-blue-500/50 text-center font-extrabold">
             Infos pratiques
         </h2>
+    </div>
+
+    <!-- Three Column Info Section -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 max-w-6xl mx-auto">
+        <!-- HORAIRES -->
+        <div class="bg-surface-900 p-6 rounded-lg border border-surface-200">
+            <h3 class="text-xl font-bold text-blue-400 mb-4">🕒 HORAIRES</h3>
+            <div class="text-white space-y-2">
+                <p><strong>Lundi :</strong> 16h - 22h</p>
+                <p><strong>Mercredi :</strong> 13h - 22h</p>
+                <p><strong>Jeudi :</strong> 16h - 22h</p>
+                <p><strong>Vendredi :</strong> 16h - 01h</p>
+                <p><strong>Samedi :</strong> 10h - 01h</p>
+                <p><strong>Dimanche :</strong> 11h - 20h</p>
+            </div>
+        </div>
+
+        <!-- ADRESSE -->
+        <div class="bg-surface-900 p-6 rounded-lg border border-surface-200">
+            <h3 class="text-xl font-bold text-blue-400 mb-4">📍 ADRESSE</h3>
+            <div class="text-white space-y-2">
+                <p class="font-semibold">138 Grande Rue</p>
+                <p>62990 Beaurainville</p>
+                <p class="mt-4 text-sm text-surface-300">
+                    Parking gratuit disponible à proximité
+                </p>
+            </div>
+        </div>
+
+        <!-- CONTACT -->
+        <div class="bg-surface-900 p-6 rounded-lg border border-surface-200">
+            <h3 class="text-xl font-bold text-blue-400 mb-4">📞 CONTACT</h3>
+            <div class="text-white space-y-2">
+                <p class="font-semibold">Téléphone</p>
+                <p><a href="tel:0672820892" class="text-blue-400 hover:text-blue-300 transition">06.72.82.08.92</a></p>
+                <p class="mt-4 text-sm text-surface-300">
+                    Nous sommes disponibles pour répondre à vos questions
+                </p>
+            </div>
+        </div>
     </div>
 
     <div class="flex flex-col md:flex-row items-center justify-center gap-8">
