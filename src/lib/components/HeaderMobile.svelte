@@ -7,7 +7,7 @@
   let anchorRail = 'btn hover:preset-tonal aspect-square w-full max-w-[84px] flex flex-col items-center gap-0.5';
 </script>
 
-<Navigation class="bg-black border-t" layout="bar">
+<Navigation class="bg-black border-t z-99" layout="bar">
     <Navigation.Content>
         <Navigation.Menu class="flex justify-center gap-8 wrap">
             <a aria-label="View Homepage" class={anchorRail} href="/" title="View Homepage">

@@ -6,8 +6,8 @@
   const texts = ['Ici, on se déconnecte pour de vrai', 'Ici, on ne se perd pas, on se retrouve'];
 </script>
 
-<section class="relative w-full bg-black">
-    <video autoplay class="w-full h-full mask-b-from-60% mask-b-to-100%" loop playsinline src="/plop.webm"></video>
+<section class="relative w-full min-h-[100vh] bg-black">
+    <video autoplay class="w-full h-full hero-video mask-b-from-60% mask-b-to-100%" loop playsinline src="/plop.webm"></video>
     <div class="absolute top-0 w-full h-full bg-[#00000080] flex items-center justify-center flex-col gap-4 p-4 text-center">
         <h1 class="h2 text-white">
             <Logo classname="w-64 md:w-128 mx-auto"/>
@@ -41,6 +41,13 @@
         stroke-width: 2px;
         fill: transparent;
         animation: down 2s infinite;
+    }
+
+    .hero-video {
+        object-fit: cover;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 
     @keyframes down {

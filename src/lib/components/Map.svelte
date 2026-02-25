@@ -68,5 +68,5 @@
 
 <!-- Wrapper adapté à Skeleton (arrondi + border) -->
 <div class="border border-surface-200 overflow-hidden shadow-xl">
-    <div id="osm-map"></div>
+    <div id="osm-map" class="z-1"></div>
 </div>
