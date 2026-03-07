@@ -90,6 +90,10 @@
             <div class="text-white space-y-2">
                 <p class="font-semibold">Téléphone</p>
                 <p><a href="tel:0672820892" class="text-blue-400 hover:text-blue-300 transition">06.72.82.08.92</a></p>
+                <p>Email</p>
+                <a class="text-blue-400 hover:text-blue-300 transition"
+                   href="mailto:zone404team@gmail.com">zone404team@gmail.com
+                </a>
                 <p class="mt-4 text-sm text-surface-300">
                     Nous sommes disponibles pour répondre à vos questions
                 </p>

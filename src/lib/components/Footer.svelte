@@ -11,7 +11,7 @@
             <li class="mb-1"><a class="hover:underline hover:text-black transition-all"
                                 href="/politique-de-confidentialite">Politique de Confidentialité</a></li>
             <li class="mb-2">
-                <a class="hover:underline hover:text-black transition-all" href="/cgv">Conditions Générales de Vente</a>
+                <a class="hover:underline hover:text-black transition-all" href="/cguv">Conditions Générales d'Utilisation et de Vente</a>
             </li>
         </ul>
 
