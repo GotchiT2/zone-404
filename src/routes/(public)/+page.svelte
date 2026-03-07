@@ -117,7 +117,6 @@
                     Comme si vous étiez chez vous.
                     Mais avec le son et l’ambiance en plus.
                 </p>
-                <!--            <a class="btn h6 bg-[#40CBB180] hover:bg-[#40CBB180] mt-8" href="/reservation">Réservez une session</a>-->
             </div>
         </div>
     </div>
@@ -133,8 +132,6 @@
         </p>
 
         <p class="btn btn-lg  preset-tonal-surface mt-4">Bientôt réservable !</p>
-
-<!--        <a class="btn btn-lg  preset-tonal-surface mt-4" href="/reservation">Réserver maintenant</a>-->
     </div>
 </section>
 
