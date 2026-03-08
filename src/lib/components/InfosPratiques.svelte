@@ -15,19 +15,19 @@
             id: '2',
             title: 'Quels moyens de paiement sont acceptés ?',
             description:
-                'En ligne, nous acceptons les paiements par carte bancaire. Sur place, nous acceptons les paiements en espèces, par carte bancaire ou en chèques vacances.',
+                'En ligne, nous acceptons les paiements par carte bancaire. Sur place, nous acceptons les paiements en espèces ou par carte bancaire.',
         },
         {
             id: '3',
             title: 'Combien de joueurs sont autorisés par salle ?',
             description:
-                'Chaque salle peut accueillir de 2 à 6 joueurs. Pour l’Escape Kids, la salle accepte jusqu’à 6 personnes incluant les accompagnateurs.',
+                'Chaque salle peut accueillir de 2 à 6 joueurs. Pour l’Escape Kids, la salle accepte jusqu’à 6 enfants et 2 accompagnateurs.',
         },
         {
             id: '4',
             title: 'Y a-t-il des restrictions d’âge pour participer ?',
             description:
-                'Oui, certaines salles ont des restrictions d’âge. L’Escape Kids est conçu pour les enfants de 4 à 8 ans, accompagnés d’un adulte. Le Tatoueur Maudit est réservé aux joueurs de 15 ans et plus, tandis que le Laboratoire de l’Extinction est accessible à partir de 10 ans.',
+                'Oui, certaines salles ont des restrictions d’âge. L’Escape Kids est conçu pour les enfants de 4 à 9 ans, accompagnés d’un adulte. Le Tatoueur Maudit est réservé aux joueurs de 15 ans et plus, tandis que le Laboratoire de l’Extinction est accessible à partir de 10 ans.',
         },
         {
             id: '5',
@@ -39,7 +39,7 @@
             id: '6',
             title: 'Quels sont vos horaires d’ouverture ?',
             description:
-                'En temps normal, nous sommes ouverts le lundi de 16h à 22h, le mercredi de 13h à 22h, le jeudi de 16h à 22h, le vendredi de 16h à 01h, le samedi de 10h à 01h et le dimanche de 11h à 20h.',
+                'En temps normal, nous sommes ouverts le lundi de 16h à 22h, le mercredi de 10h à 22h, le jeudi de 16h à 22h, le vendredi de 16h à 01h, le samedi de 10h à 01h et le dimanche de 11h à 20h.',
         },
         {
             id: '7',
@@ -64,7 +64,8 @@
             <h3 class="text-xl font-bold text-blue-400 mb-4">🕒 HORAIRES</h3>
             <div class="text-white space-y-2">
                 <p><strong>Lundi :</strong> 16h - 22h</p>
-                <p><strong>Mercredi :</strong> 13h - 22h</p>
+                <p><strong>Mardi :</strong> fermé</p>
+                <p><strong>Mercredi :</strong> 10h - 22h</p>
                 <p><strong>Jeudi :</strong> 16h - 22h</p>
                 <p><strong>Vendredi :</strong> 16h - 01h</p>
                 <p><strong>Samedi :</strong> 10h - 01h</p>
