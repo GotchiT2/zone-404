@@ -29,7 +29,7 @@
                     (Alcool servi uniquement avec consommation de nourriture.)<br/>
                     <span class="font-bold">À Zone 404, on vient pour jouer… et on reste pour l’ambiance.</span>
                 </p>
-                <p class="btn h6 bg-[#EAB72080] hover:bg-[#EAB72080] mt-8">Ouverture le 6 avril !</p>
+                <p class="btn h6 bg-[#EAB72080] hover:bg-[#EAB72080] mt-8">Ouverture prochainement !</p>
             </div>
         </div>
 
@@ -74,7 +74,7 @@
             <div class="md:w-1/5">
                 <h3 class="h4 mb-8">Projet Vaïk 17 <br/>le Laboratoire de l’extinction</h3>
                 <Separator color="#40CBB180"/>
-                <p class="my-4">Dans ce escape game futuriste, vous êtes les derniers espoirs de l’humanité. <span
+                <p class="my-4">Dans cet escape game futuriste, vous êtes les derniers espoirs de l’humanité. <span
                         class="font-bold">Explorez un
                     laboratoire
                     abandonné</span>, analysez les indices et <span
