@@ -17,6 +17,8 @@
 	let eventSource: EventSource | null = null;
 	let timerInterval: number | null = null;
 	let displayTime = $state('--:--');
+	let timerEndTimestamp: number | null = null;
+	let lastRemainingMs = 0;
 	
 	// État pour les messages
 	let messageText = $state('');
@@ -49,12 +51,12 @@
 			return;
 		}
 		
-		if (timer.state === 'RUNNING') {
-			const now = Date.now();
-			const elapsed = timer.remainingMs - (now - new Date(timer.updatedAt).getTime());
-			displayTime = formatTime(Math.max(0, elapsed));
+		if (timer.state === 'RUNNING' && timerEndTimestamp) {
+			const remaining = Math.max(0, timerEndTimestamp - Date.now());
+			displayTime = formatTime(remaining);
+			lastRemainingMs = remaining;
 		} else {
-			displayTime = formatTime(timer.remainingMs);
+			displayTime = formatTime(lastRemainingMs || timer.remainingMs);
 		}
 	}
 	
@@ -246,6 +248,15 @@
 				remainingMs: newData.remainingMs,
 				updatedAt: newData.serverNow
 			};
+			
+			// Stocker le timestamp de fin pour une synchronisation précise
+			if (newData.status === 'RUNNING' && newData.endsAt) {
+				timerEndTimestamp = new Date(newData.endsAt).getTime();
+			} else {
+				timerEndTimestamp = null;
+			}
+			
+			lastRemainingMs = newData.remainingMs;
 			updateTimerDisplay();
 		});
 		
@@ -259,7 +270,7 @@
 		};
 		
 		updateTimerDisplay();
-		timerInterval = window.setInterval(updateTimerDisplay, 1000);
+		timerInterval = window.setInterval(updateTimerDisplay, 100);
 	}
 	
 	$effect(() => {
