@@ -27,9 +27,6 @@
   let lastRemainingMs = 0;
 
   // ✅ derived values (remplace $:)
-  const token = $derived(
-    browser ? new URLSearchParams(window.location.search).get('token') || '' : ''
-  );
   const roomId = $derived(data.roomId);
 
   function formatTime(ms: number): string {
@@ -170,11 +167,6 @@
   }
 
   function setupSSE() {
-    if (!token) {
-      console.error('[Display] No token provided');
-      return;
-    }
-
     if (eventSource) {
       eventSource.close();
     }
@@ -183,7 +175,7 @@
       clearInterval(timerInterval);
     }
 
-    const url = `/api/rooms/${roomId}/events?token=${encodeURIComponent(token)}`;
+    const url = `/api/rooms/${roomId}/events`;
     eventSource = new EventSource(url);
 
     eventSource.addEventListener('timer_state', (e) => {

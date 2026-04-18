@@ -5,13 +5,8 @@ import { prisma } from '$lib/server/prisma';
 import { addSSEClient, removeSSEClient } from '$lib/server/sse';
 import { timerToJSON, timerToDisplayEvent } from '$lib/server/timer';
 
-export const GET: RequestHandler = async ({ params, url }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const { roomId } = params;
-	const token = url.searchParams.get('token');
-
-	if (!token) {
-		throw error(401, 'Token required');
-	}
 
 	// Find the room
 	const room = await prisma.room.findUnique({
