@@ -86,9 +86,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		rooms: [
-			salle1 || { roomId: 'salle-1', roomName: 'Salle 1', error: 'No active run' },
-			salle2 || { roomId: 'salle-2', roomName: 'Salle 2', error: 'No active run' },
-			salle3 || { roomId: 'salle-3', roomName: 'Salle 3', error: 'No active run' }
+			salle1 || { roomId: 'salle-1', roomName: 'Tatoueur', error: 'No active run' },
+			salle2 || { roomId: 'salle-2', roomName: 'Escape Kids', error: 'No active run' },
+			salle3 || { roomId: 'salle-3', roomName: 'Laboratoire', error: 'No active run' }
 		]
 	};
 };
