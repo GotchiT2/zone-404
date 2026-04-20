@@ -33,7 +33,7 @@
             id: '5',
             title: 'Proposez-vous des options pour les groupes ou les événements spéciaux ?',
             description:
-                'Oui, nous proposons des options spéciales pour les groupes, les anniversaires et les événements d’entreprise. Veuillez nous contacter directement pour discuter de vos besoins spécifiques et organiser une expérience personnalisée, ou rendez-vous dans la section "Nos Formules" pour consulter le détail.',
+                'Oui, nous proposons des options spéciales pour les groupes, les anniversaires et les événements d’entreprise. Veuillez nous contacter directement pour discuter de vos besoins spécifiques et organiser une expérience personnalisée.',
         },
         {
             id: '6',
@@ -45,7 +45,7 @@
             id: '7',
             title: 'Que faire si je ne trouve pas de créneau qui me corresponde ?',
             description:
-                'Nous sommes joignables par téléphone. Appelez-nous au 06.72.82.08.92 et nous ferons de notre mieux pour vous accommoder en fonction de vos disponibilités.',
+                'Nous sommes joignables par téléphone. Appelez-nous au 0672820892 et nous ferons de notre mieux pour vous accommoder en fonction de vos disponibilités.',
         }
     ];
 </script>

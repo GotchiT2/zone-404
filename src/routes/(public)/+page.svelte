@@ -29,7 +29,7 @@
                     (Alcool servi uniquement avec consommation de nourriture.)<br/>
                     <span class="font-bold">À Zone 404, on vient pour jouer… et on reste pour l’ambiance.</span>
                 </p>
-                <p class="btn h6 bg-[#EAB72080] hover:bg-[#EAB72080] mt-8">Ouverture prochainement !</p>
+                <p class="btn h6 bg-[#EAB72080] hover:bg-[#EAB72080] mt-8">Ouverture vendredi 24 avril !</p>
             </div>
         </div>
 
@@ -44,10 +44,11 @@
                 <p class="my-4">Transformez vos enfants en apprenti magicien dans un
                     <span class="font-bold">escape game ludique et immersif !</span> En équipe de 2 à 6, les apprentis sorciers de 4 à 9 ans devront résoudre de petites énigmes et découvrir le mystère de la créature “Souchisse”, maîtresse de l’école de magie.
                     <span class="font-bold">Une aventure idéale pour une première expérience d’escape game.</span>
+                    Un accompagnateur est obligatoire pour guider les enfants et partager ce moment magique.
                 </p>
                 <div class="flex gap-4"><span class="badge preset-filled-primary-500">De 4 à 8 ans</span><span
                         class="badge preset-filled-primary-500">Accompagnateur obligatoire</span></div>
-                <p class="btn h6 bg-[#8AAC3580] hover:bg-[#8AAC3580] mt-8">Bientôt réservable !</p>
+                <a href="https://www.zone404.fr/reservation" class="btn h6 bg-[#8AAC3580] hover:bg-[#8AAC3580] mt-8">Réservez une session</a>
 
             </div>
         </div>
@@ -62,7 +63,7 @@
                     trace de votre passage. Une
                     enquête intense pour amateurs de sensations fortes.</p>
                 <div class="flex gap-4"><span class="badge preset-filled-primary-500">À partir de 15 ans</span></div>
-                <p class="btn h6 bg-[#D8481980] hover:bg-[#D8481980] mt-8">Bientôt réservable !</p>
+                <a href="https://www.zone404.fr/reservation" class="btn h6 bg-[#D8481980] hover:bg-[#D8481980] mt-8">Réservez une session</a>
             </div>
         </div>
 
