@@ -214,13 +214,17 @@
 		
 		eventSource = new EventSource(`/api/gm/rooms/${roomId}/stream`);
 		
-		eventSource.addEventListener('state', (e) => {
-			const newData = JSON.parse(e.data);
-			trials = newData.trials;
+	eventSource.addEventListener('state', (e) => {
+		const newData = JSON.parse(e.data);
+		trials = newData.trials;
+		runId = newData.runId;
+		if (newData.timer && newData.timer.state !== 'RUNNING') {
 			timer = newData.timer;
-			runId = newData.runId;
-			updateTimerDisplay();
-		});
+			timerEndTimestamp = null;
+			lastRemainingMs = newData.timer.remainingMs;
+		}
+		updateTimerDisplay();
+	});
 		
 		eventSource.addEventListener('trial_set', (e) => {
 			const newData = JSON.parse(e.data);
@@ -272,12 +276,6 @@
 		updateTimerDisplay();
 		timerInterval = window.setInterval(updateTimerDisplay, 100);
 	}
-	
-	$effect(() => {
-		if (browser && roomId) {
-			setupSSE();
-		}
-	});
 	
 	onMount(() => {
 		setupSSE();
