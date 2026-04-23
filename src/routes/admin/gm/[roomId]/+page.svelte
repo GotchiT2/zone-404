@@ -205,25 +205,27 @@
 	}
 	
 	function setupSSE() {
+		console.log('[GM] setupSSE() called');
+		
 		if (eventSource) {
+			console.log('[GM] Closing existing EventSource');
 			eventSource.close();
+			eventSource = null;
 		}
-		if (timerInterval) {
+		if (timerInterval !== null) {
+			console.log('[GM] Clearing existing interval:', timerInterval);
 			clearInterval(timerInterval);
+			timerInterval = null;
 		}
 		
+		console.log('[GM] Creating new EventSource');
 		eventSource = new EventSource(`/api/gm/rooms/${roomId}/stream`);
 		
 	eventSource.addEventListener('state', (e) => {
 		const newData = JSON.parse(e.data);
 		trials = newData.trials;
 		runId = newData.runId;
-		if (newData.timer && newData.timer.state !== 'RUNNING') {
-			timer = newData.timer;
-			timerEndTimestamp = null;
-			lastRemainingMs = newData.timer.remainingMs;
-		}
-		updateTimerDisplay();
+		// Ne PAS mettre à jour le timer ici - c'est géré par timer_state uniquement
 	});
 		
 		eventSource.addEventListener('trial_set', (e) => {
@@ -269,13 +271,21 @@
 			messages = [...messages, newData];
 		});
 		
-		eventSource.onerror = (e) => {
-			console.error('SSE error:', e);
-		};
-		
+	eventSource.onerror = (e) => {
+		console.error('[GM] SSE error:', e);
+	};
+	
+	eventSource.onopen = () => {
+		console.log('[GM] SSE connection opened');
+	};
+	
+	updateTimerDisplay();
+	timerInterval = window.setInterval(() => {
+		console.log('[GM] Timer interval tick');
 		updateTimerDisplay();
-		timerInterval = window.setInterval(updateTimerDisplay, 100);
-	}
+	}, 100);
+	console.log('[GM] Created interval with ID:', timerInterval);
+}
 	
 	onMount(() => {
 		setupSSE();
@@ -308,7 +318,7 @@
 						Salle 1
 					</a>
 					<a href="/admin/gm/salle-2" class="chip {roomId === 'salle-2' ? 'preset-filled-primary-500 shadow-lg' : 'preset-outlined-primary-500 hover:preset-filled-primary-500'} transition-all">
-						Salle 2
+						!Salle 2
 					</a>
 					<a href="/admin/gm/salle-3" class="chip {roomId === 'salle-3' ? 'preset-filled-primary-500 shadow-lg' : 'preset-outlined-primary-500 hover:preset-filled-primary-500'} transition-all">
 						Salle 3
