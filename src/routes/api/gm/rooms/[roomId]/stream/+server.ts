@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { addSSEClient, removeSSEClient, broadcastToRoom } from '$lib/server/sse';
-import { timerToJSON } from '$lib/server/timer';
+import { timerToJSON, timerToDisplayEvent } from '$lib/server/timer';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	// Vérifier l'authentification GM (session)
@@ -96,6 +96,11 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		setTimeout(() => {
 			// Broadcaster l'état initial aux clients connectés
 			broadcastToRoom(roomId, 'state', initialState);
+			
+			// Envoyer aussi l'état du timer avec endsAt pour synchronisation correcte
+			if (currentRun.timer) {
+				broadcastToRoom(roomId, 'timer_state', timerToDisplayEvent(currentRun.timer));
+			}
 		}, 100);
 	}
 

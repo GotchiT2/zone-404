@@ -7,9 +7,9 @@ async function main() {
 
   // Définition des salles avec leur nombre d'épreuves
   const rooms = [
-    { slug: 'salle-1', name: 'Salle 1', trialCount: 10, defaultTimerDurationMs: 3600000 }, // 60 min
-    { slug: 'salle-2', name: 'Salle 2', trialCount: 12, defaultTimerDurationMs: 3600000 }, // 60 min
-    { slug: 'salle-3', name: 'Salle 3', trialCount: 8, defaultTimerDurationMs: 3600000 }   // 60 min
+    { slug: 'salle-1', name: 'Tatoueur', trialCount: 10, defaultTimerDurationMs: 3600000 }, // 60 min
+    { slug: 'salle-2', name: 'Escape Kids', trialCount: 12, defaultTimerDurationMs: 3600000 }, // 60 min
+    { slug: 'salle-3', name: 'Labo Vaïk-17', trialCount: 8, defaultTimerDurationMs: 3600000 }   // 60 min
   ];
 
   for (const roomData of rooms) {

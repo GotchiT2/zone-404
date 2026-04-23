@@ -268,6 +268,17 @@
 		
 	eventSource.onerror = (e) => {
 		console.error('[GM] SSE error:', e);
+		// Fermer proprement la connexion en cas d'erreur
+		if (eventSource) {
+			eventSource.close();
+		}
+		// Reconnexion automatique après 3 secondes
+		setTimeout(() => {
+			if (browser) {
+				console.log('[GM] Attempting to reconnect SSE...');
+				setupSSE();
+			}
+		}, 3000);
 	};
 	
 	eventSource.onopen = () => {
@@ -307,13 +318,13 @@
 				</h1>
 				<div class="flex gap-2 flex-wrap">
 					<a href="/admin/gm/salle-1" class="chip {roomId === 'salle-1' ? 'preset-filled-primary-500 shadow-lg' : 'preset-outlined-primary-500 hover:preset-filled-primary-500'} transition-all">
-						Salle 1
+						Tatoueur
 					</a>
 					<a href="/admin/gm/salle-2" class="chip {roomId === 'salle-2' ? 'preset-filled-primary-500 shadow-lg' : 'preset-outlined-primary-500 hover:preset-filled-primary-500'} transition-all">
-						!Salle 2
+						Escape Kids
 					</a>
 					<a href="/admin/gm/salle-3" class="chip {roomId === 'salle-3' ? 'preset-filled-primary-500 shadow-lg' : 'preset-outlined-primary-500 hover:preset-filled-primary-500'} transition-all">
-						Salle 3
+						Labo Vaïk-17
 					</a>
 				</div>
 			</div>
