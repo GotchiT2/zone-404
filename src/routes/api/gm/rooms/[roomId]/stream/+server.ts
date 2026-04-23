@@ -2,7 +2,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
-import { createSSEStream, broadcastToRoom } from '$lib/server/sse';
+import { addSSEClient, removeSSEClient, broadcastToRoom } from '$lib/server/sse';
 import { timerToJSON } from '$lib/server/timer';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -22,8 +22,38 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		throw error(404, 'Room not found');
 	}
 
-	// Créer le stream SSE
-	const stream = createSSEStream(roomId);
+	// Créer le stream SSE avec heartbeat
+	let sseClient: any = null;
+	let heartbeatInterval: NodeJS.Timeout | null = null;
+	
+	const stream = new ReadableStream({
+		start(controller) {
+			const encoder = new TextEncoder();
+			
+			// Enregistrer ce client dans le système SSE
+			sseClient = addSSEClient(roomId, controller);
+			
+			// Heartbeat pour maintenir la connexion active (toutes les 30s)
+			heartbeatInterval = setInterval(() => {
+				try {
+					controller.enqueue(encoder.encode(': heartbeat\n\n'));
+				} catch (e) {
+					if (heartbeatInterval) clearInterval(heartbeatInterval);
+				}
+			}, 30000);
+			
+			// Envoyer un message de connexion
+			controller.enqueue(encoder.encode(': connected\n\n'));
+		},
+		cancel() {
+			if (heartbeatInterval) {
+				clearInterval(heartbeatInterval);
+			}
+			if (sseClient) {
+				removeSSEClient(sseClient);
+			}
+		}
+	});
 
 	// Envoyer l'état initial
 	const currentRun = await prisma.run.findFirst({

@@ -44,19 +44,14 @@
 		return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 	}
 	
-	// Mettre à jour l'affichage du timer
+	// Mettre à jour l'affichage du timer (logique identique au display)
 	function updateTimerDisplay() {
-		if (!timer) {
-			displayTime = '--:--';
-			return;
-		}
-		
-		if (timer.state === 'RUNNING' && timerEndTimestamp) {
+		if (timer && timer.state === 'RUNNING' && timerEndTimestamp) {
 			const remaining = Math.max(0, timerEndTimestamp - Date.now());
 			displayTime = formatTime(remaining);
 			lastRemainingMs = remaining;
 		} else {
-			displayTime = formatTime(lastRemainingMs || timer.remainingMs);
+			displayTime = formatTime(lastRemainingMs);
 		}
 	}
 	
@@ -280,10 +275,7 @@
 	};
 	
 	updateTimerDisplay();
-	timerInterval = window.setInterval(() => {
-		console.log('[GM] Timer interval tick');
-		updateTimerDisplay();
-	}, 100);
+	timerInterval = window.setInterval(updateTimerDisplay, 100);
 	console.log('[GM] Created interval with ID:', timerInterval);
 }
 	
