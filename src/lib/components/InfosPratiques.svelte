@@ -21,13 +21,13 @@
             id: '3',
             title: 'Combien de joueurs sont autorisés par salle ?',
             description:
-                'Chaque salle peut accueillir de 2 à 6 joueurs. Pour l’Escape Kids, la salle accepte jusqu’à 6 enfants et 2 accompagnateurs.',
+                'Chaque salle peut accueillir de 2 à 6 joueurs. Pour La classe magique: Le mystère de Souchisse, la salle accepte jusqu’à 6 enfants et 2 accompagnateurs.',
         },
         {
             id: '4',
             title: 'Y a-t-il des restrictions d’âge pour participer ?',
             description:
-                'Oui, certaines salles ont des restrictions d’âge. L’Escape Kids est conçu pour les enfants de 4 à 9 ans, accompagnés d’un adulte. Le Tatoueur Maudit est réservé aux joueurs de 15 ans et plus, tandis que le Laboratoire de l’Extinction est accessible à partir de 10 ans.',
+                'Oui, certaines salles ont des restrictions d’âge. La classe magique: Le mystère de Souchisse est conçue pour les enfants de 4 à 9 ans, accompagnés d’un adulte. L’Encre des Damnés est réservé aux joueurs de 15 ans et plus, tandis que le Projet Vaïk 17 - le Laboratoire de l’Extinction est accessible à partir de 10 ans.',
         },
         {
             id: '5',
@@ -46,6 +46,12 @@
             title: 'Que faire si je ne trouve pas de créneau qui me corresponde ?',
             description:
                 'Nous sommes joignables par téléphone. Appelez-nous au 0672820892 et nous ferons de notre mieux pour vous accommoder en fonction de vos disponibilités.',
+        },
+        {
+            id: '8',
+            title: 'Quels sont les tarifs pour un escape game ?',
+            description:
+                'Pour La classe magique: Le mystère de Souchisse, le tarif est de 15€ par enfant et 5€ par accompagnant (2 accompagnants maximum). Pour L’Encre des Damnés et Projet Vaïk 17 - le Laboratoire de l’Extinction, les tarifs varient selon le nombre de participants (de 20€ à 28€ par personne). Les réservations se font au plus tard deux heures avant le début du créneau.',
         }
     ];
 </script>
