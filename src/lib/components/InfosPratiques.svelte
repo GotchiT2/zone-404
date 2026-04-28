@@ -73,8 +73,8 @@
                 <p><strong>Mardi :</strong> fermé</p>
                 <p><strong>Mercredi :</strong> 10h - 22h</p>
                 <p><strong>Jeudi :</strong> 16h - 22h</p>
-                <p><strong>Vendredi :</strong> 16h - 01h</p>
-                <p><strong>Samedi :</strong> 10h - 01h</p>
+                <p><strong>Vendredi :</strong> 16h - 23h (et + selon l'ambiance)</p>
+                <p><strong>Samedi :</strong> 10h - 23h (et + selon l'ambiance)</p>
                 <p><strong>Dimanche :</strong> 11h - 20h</p>
             </div>
         </div>
