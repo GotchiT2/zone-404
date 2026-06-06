@@ -3,6 +3,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { createFilesystem, parseModulesConfig, stringifyModulesConfig } from '$lib/utils/terminal-filesystem';
 	import { executeCommand, autocomplete } from '$lib/utils/terminal-commands';
+	import FileTree from './FileTree.svelte';
 	
 	const dispatch = createEventDispatcher();
 	
@@ -61,7 +62,7 @@
 
 Système de récupération activé.
 Tapez 'help' pour afficher les commandes disponibles.
-Tapez 'cat README_RECOVERY.txt' pour lire les instructions.
+Tapez 'cat LISEZ_MOI.txt' pour lire les instructions.
 `
 		});
 		
@@ -145,7 +146,7 @@ Tapez 'cat README_RECOVERY.txt' pour lire les instructions.
 		}
 		
 		// Si l'app a démarré avec succès, valider l'étape
-		if (cmd.trim() === 'npm run start' && buildSucceeded && result.type === 'success') {
+		if (cmd.trim() === 'start' && buildSucceeded && result.type === 'success') {
 			appStarted = true;
 			
 			// Appeler l'API pour valider l'étape
@@ -170,11 +171,17 @@ Tapez 'cat README_RECOVERY.txt' pour lire les instructions.
 		}
 	}
 	
+	function submitCommand() {
+		if (appStarted || !currentInput.trim()) return;
+		handleCommand(currentInput);
+		currentInput = '';
+		inputElement?.focus();
+	}
+
 	function handleKeyDown(e) {
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			handleCommand(currentInput);
-			currentInput = '';
+			submitCommand();
 		} else if (e.key === 'Tab') {
 			e.preventDefault();
 			// Auto-complétion
@@ -267,6 +274,7 @@ Module synthesisEngine : ${modulesConfig.modules.synthesisEngine ? 'ACTIVÉ' : '
 <div class="terminal-stage">
 	{#if !isEditing}
 		<!-- Terminal normal ---->
+		<FileTree {filesystem} {currentPath} />
 		<div class="terminal-container">
 			<div class="terminal-output" bind:this={terminalOutputElement}>
 				{#each terminalHistory as entry}
@@ -295,19 +303,33 @@ Module synthesisEngine : ${modulesConfig.modules.synthesisEngine ? 'ACTIVÉ' : '
 				{/each}
 			</div>
 			
-			<div class="terminal-input-line">
-				<span class="prompt">{currentPath.length === 0 ? '/' : '/' + currentPath.join('/')} $</span>
-				<input
-					bind:this={inputElement}
-					bind:value={currentInput}
-					on:keydown={handleKeyDown}
-					class="terminal-input"
-					type="text"
-					spellcheck="false"
-					autocomplete="off"
-					disabled={appStarted}
-					placeholder={appStarted ? 'Transfert en cours...' : ''}
-				/>
+			<div class="terminal-input-bar">
+				<div class="chat-input" class:disabled={appStarted}>
+					<span class="chat-prompt">{currentPath.length === 0 ? '/' : '/' + currentPath.join('/')} $</span>
+					<input
+						bind:this={inputElement}
+						bind:value={currentInput}
+						on:keydown={handleKeyDown}
+						class="terminal-input"
+						type="text"
+						spellcheck="false"
+						autocomplete="off"
+						disabled={appStarted}
+						placeholder={appStarted ? 'Transfert en cours...' : 'Tapez une commande… (help pour l\'aide)'}
+					/>
+					<button
+						type="button"
+						class="send-btn"
+						on:click={submitCommand}
+						disabled={appStarted || !currentInput.trim()}
+						aria-label="Envoyer la commande"
+					>
+						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+							<line x1="12" y1="19" x2="12" y2="5" />
+							<polyline points="6 11 12 5 18 11" />
+						</svg>
+					</button>
+				</div>
 			</div>
 		</div>
 	{:else}
@@ -461,41 +483,92 @@ Module synthesisEngine : ${modulesConfig.modules.synthesisEngine ? 'ACTIVÉ' : '
 		color: var(--text-secondary);
 	}
 	
-	.terminal-input-line {
+	.terminal-input-bar {
+		flex-shrink: 0;
+		padding: var(--spacing-lg);
+		display: flex;
+		justify-content: center;
+		background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+	}
+
+	.chat-input {
 		display: flex;
 		align-items: center;
-		padding: var(--spacing-md) var(--spacing-lg);
-		background: rgba(0, 229, 255, 0.05);
-		border-top: 1px solid var(--border-color);
-		flex-shrink: 0;
+		gap: var(--spacing-sm);
+		width: 100%;
+		max-width: 820px;
+		padding: 10px 10px 10px 18px;
+		background: var(--bg-panel-light);
+		border: 1px solid var(--border-color);
+		border-radius: 16px;
+		box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
 	}
-	
-	.terminal-input-line .prompt {
+
+	.chat-input:focus-within {
+		border-color: var(--accent-cyan);
+		box-shadow: 0 0 0 3px var(--cyan-soft), 0 8px 28px rgba(0, 0, 0, 0.45);
+	}
+
+	.chat-input.disabled {
+		opacity: 0.6;
+	}
+
+	.chat-prompt {
 		color: var(--accent-green);
-		margin-right: 8px;
 		font-family: var(--font-mono);
-		font-size: 14px;
+		font-size: 15px;
+		font-weight: 600;
 		flex-shrink: 0;
 	}
-	
+
 	.terminal-input {
 		flex: 1;
+		min-width: 0;
 		background: transparent;
 		border: none;
 		outline: none;
 		color: var(--text-primary);
 		font-family: var(--font-mono);
-		font-size: 14px;
-		padding: 0;
+		font-size: 15px;
+		padding: 6px 0;
 		caret-color: var(--accent-cyan);
 	}
-	
+
 	.terminal-input::placeholder {
 		color: var(--text-muted);
 	}
-	
+
 	.terminal-input:disabled {
-		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.send-btn {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border: none;
+		border-radius: 12px;
+		background: var(--accent-cyan);
+		color: #020617;
+		cursor: pointer;
+		transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+	}
+
+	.send-btn:hover:not(:disabled) {
+		background: #5cefff;
+	}
+
+	.send-btn:active:not(:disabled) {
+		transform: scale(0.92);
+	}
+
+	.send-btn:disabled {
+		background: var(--bg-panel);
+		color: var(--text-muted);
 		cursor: not-allowed;
 	}
 	
@@ -652,16 +725,29 @@ Module synthesisEngine : ${modulesConfig.modules.synthesisEngine ? 'ACTIVÉ' : '
 	
 	/* Responsive */
 	@media (max-width: 768px) {
-		.terminal-output,
-		.terminal-input-line {
+		.terminal-output {
 			padding: var(--spacing-md);
 		}
-		
+
+		.terminal-input-bar {
+			padding: var(--spacing-md);
+		}
+
+		.chat-input {
+			padding: 8px 8px 8px 14px;
+			border-radius: 14px;
+		}
+
 		.terminal-output,
 		.terminal-input,
-		.terminal-input-line .prompt,
+		.chat-prompt,
 		.edit-config {
-			font-size: 12px;
+			font-size: 13px;
+		}
+
+		.send-btn {
+			width: 36px;
+			height: 36px;
 		}
 		
 		.edit-container {

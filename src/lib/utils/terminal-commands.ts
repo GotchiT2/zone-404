@@ -39,18 +39,16 @@ export function executeCommand(
 			return commandHelp();
 		case 'clear':
 			return { output: '', type: 'info' };
-		case 'ls':
-			return commandLs(args, context);
-		case 'pwd':
-			return commandPwd(context);
 		case 'cd':
 			return commandCd(args, context);
 		case 'cat':
 			return commandCat(args, context);
 		case 'edit':
 			return commandEdit(args, context);
-		case 'npm':
-			return commandNpm(args, context);
+		case 'build':
+			return commandBuild(context);
+		case 'start':
+			return commandStart(context);
 		default:
 			return {
 				output: `Commande non reconnue : ${cmd}\nTapez 'help' pour voir les commandes disponibles.`,
@@ -66,17 +64,9 @@ function commandHelp(): CommandResult {
 ╚════════════════════════════════════════════════════════════════╝
 
 NAVIGATION
-  ls [nom-dossier]
-    Affiche le contenu du répertoire courant ou d'un sous-dossier.
-    Liste les fichiers et dossiers disponibles.
-    Exemples : ls, ls logs, ls config
-
-  pwd
-    Affiche le chemin du répertoire courant.
-    Permet de savoir où vous vous trouvez dans l'arborescence.
-
   cd <nom-dossier>
     Entre dans un sous-dossier.
+    L'arborescence à droite indique en permanence votre position.
     Exemple : cd config
 
   cd ..
@@ -86,8 +76,8 @@ NAVIGATION
 CONSULTATION
   cat <nom-fichier>
     Affiche le contenu complet d'un fichier texte.
-    Utile pour lire les logs, configurations et code source.
-    Exemple : cat README_RECOVERY.txt
+    Utile pour lire l'historique d'activité, les configurations et le code source.
+    Exemple : cat LISEZ_MOI.txt
 
 MODIFICATION
   edit <chemin-fichier>
@@ -96,69 +86,23 @@ MODIFICATION
     Exemple : edit config/modules.json
 
 COMPILATION & EXÉCUTION
-  npm run build
+  build
     Lance la compilation du système de synthèse.
     Nécessite une configuration valide pour réussir.
 
-  npm run start
+  start
     Démarre l'application de synthèse d'antidote.
     Nécessite une compilation réussie au préalable.
 
-UTILITAIRES
-  clear
-    Efface l'historique du terminal.
-
-  help
-    Affiche cette aide.
-
-AUTO-COMPLÉTION
-  Utilisez la touche TAB pour compléter automatiquement
-  les commandes et noms de fichiers.
-
-CONSEIL
-Commencez par lire le fichier README_RECOVERY.txt pour comprendre
-la situation, puis explorez les logs pour identifier le problème.
+╔════════════════════════════════════════════════════════════════╗
+║                          ► CONSEIL ◄                          ║
+╠════════════════════════════════════════════════════════════════╣
+║  Commencez par lire le fichier LISEZ_MOI.txt pour comprendre   ║
+║  la situation, puis consultez l'historique d'activité pour      ║
+║  identifier le problème.                                       ║
+╚════════════════════════════════════════════════════════════════╝
 `;
 	return { output: help, type: 'info' };
-}
-
-function commandLs(args: string[], context: CommandContext): CommandResult {
-	// Déterminer le chemin à lister
-	let targetPath = context.currentPath;
-	
-	if (args.length > 0) {
-		const target = args[0];
-		// Si c'est un chemin relatif, on l'ajoute au chemin courant
-		targetPath = [...context.currentPath, target];
-	}
-	
-	const node = getNodeAtPath(targetPath, context.filesystem);
-	if (!node) {
-		return { output: `Dossier introuvable : ${args[0] || ''}`, type: 'error' };
-	}
-	
-	if (node.type !== 'directory') {
-		return { output: `"${args[0]}" n'est pas un dossier`, type: 'error' };
-	}
-
-	const children = node.children || {};
-	const items: string[] = [];
-
-	for (const [name, child] of Object.entries(children)) {
-		const prefix = child.type === 'directory' ? '📁 ' : '📄 ';
-		items.push(`${prefix}${name}`);
-	}
-
-	if (items.length === 0) {
-		return { output: '(répertoire vide)', type: 'info' };
-	}
-
-	return { output: items.join('\n'), type: 'success' };
-}
-
-function commandPwd(context: CommandContext): CommandResult {
-	const path = context.currentPath.length === 0 ? '/' : '/' + context.currentPath.join('/');
-	return { output: path, type: 'info' };
 }
 
 function commandCd(args: string[], context: CommandContext): CommandResult {
@@ -259,32 +203,9 @@ function commandEdit(args: string[], context: CommandContext): CommandResult {
 	};
 }
 
-function commandNpm(args: string[], context: CommandContext): CommandResult {
-	if (args.length < 2 || args[0] !== 'run') {
-		return {
-			output: 'Usage : npm run <script>\nScripts disponibles : build, start',
-			type: 'error'
-		};
-	}
-
-	const script = args[1];
-
-	if (script === 'build') {
-		return commandNpmBuild(context);
-	} else if (script === 'start') {
-		return commandNpmStart(context);
-	} else {
-		return {
-			output: `Script npm inconnu : ${script}\nScripts disponibles : build, start`,
-			type: 'error'
-		};
-	}
-}
-
-function commandNpmBuild(context: CommandContext): CommandResult {
+function commandBuild(context: CommandContext): CommandResult {
 	const output = `
-> antidote-synthesis-system@1.0.0 build
-> Compilation du système de synthèse
+Compilation du système de synthèse...
 
 Lecture de la configuration : config/modules.json
 Vérification des modules requis...
@@ -320,21 +241,21 @@ Optimisation du code...
 
 ✓ Compilation RÉUSSIE
 Le système est prêt à être démarré.
-Utilisez 'npm run start' pour lancer l'application.
+Utilisez 'start' pour lancer l'application.
 `,
 		type: 'success',
 		buildSuccess: true
 	};
 }
 
-function commandNpmStart(context: CommandContext): CommandResult {
+function commandStart(context: CommandContext): CommandResult {
 	if (!context.buildSucceeded) {
 		return {
 			output: `
 ERREUR : Aucune compilation valide détectée.
 
 Vous devez d'abord compiler le système avec succès.
-Utilisez 'npm run build' pour compiler.
+Utilisez 'build' pour compiler.
 `,
 			type: 'error'
 		};
@@ -342,8 +263,7 @@ Utilisez 'npm run build' pour compiler.
 
 	return {
 		output: `
-> antidote-synthesis-system@1.0.0 start
-> Lancement de l'application de synthèse
+Lancement de l'application de synthèse...
 
 Initialisation du système de synthèse...
   ✓ Moteur de synthèse : ACTIF
@@ -395,7 +315,7 @@ export function autocomplete(
 
 	// Si on n'a qu'un mot, compléter la commande
 	if (parts.length === 1) {
-		const commands = ['help', 'clear', 'ls', 'pwd', 'cd', 'cat', 'edit', 'npm'];
+		const commands = ['help', 'clear', 'cd', 'cat', 'edit', 'build', 'start'];
 		const matches = commands.filter(c => c.startsWith(cmd));
 		
 		if (matches.length === 1) {

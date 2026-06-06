@@ -19,9 +19,9 @@ export interface ModulesConfig {
 
 export function createFilesystem(): Record<string, FileNode> {
 	return {
-		'README_RECOVERY.txt': {
+		'LISEZ_MOI.txt': {
 			type: 'file',
-			name: 'README_RECOVERY.txt',
+			name: 'LISEZ_MOI.txt',
 			content: `==============================================
   TERMINAL DE SECOURS - LABORATOIRE VAÏK-17
 ==============================================
@@ -34,7 +34,7 @@ VOTRE MISSION
 Restaurer le système pour permettre la synthèse de l'antidote.
 
 PROCÉDURE DE RÉCUPÉRATION
-1. Examinez les journaux système pour identifier la cause de la panne
+1. Consultez l'historique d'activité pour identifier la cause de la panne
 2. Corrigez la configuration défaillante
 3. Relancez la compilation du système
 4. Démarrez l'application de synthèse
@@ -128,13 +128,13 @@ module.exports = { initializeSynthesisSystem };
 				}
 			}
 		},
-		logs: {
+		historique: {
 			type: 'directory',
-			name: 'logs',
+			name: 'historique',
 			children: {
-				'build.log': {
+				'activite.log': {
 					type: 'file',
-					name: 'build.log',
+					name: 'activite.log',
 					content: `[2026-04-10 18:42:17] Démarrage de la compilation...
 [2026-04-10 18:42:18] Lecture de la configuration : config/modules.json
 [2026-04-10 18:42:18] Vérification des modules requis...
@@ -148,7 +148,7 @@ module.exports = { initializeSynthesisSystem };
 [2026-04-10 18:42:19] 
 [2026-04-10 18:42:19] ACTION REQUISE:
 [2026-04-10 18:42:19] Activez le module 'synthesisEngine' dans config/modules.json
-[2026-04-10 18:42:19] puis relancez la compilation avec 'npm run build'
+[2026-04-10 18:42:19] puis relancez la compilation avec 'build'
 [2026-04-10 18:42:19] 
 [2026-04-10 18:42:19] Compilation ÉCHOUÉE
 `

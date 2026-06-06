@@ -34,6 +34,10 @@
 		isSendingMessage: boolean;
 		messageError: string;
 		isExpanded: boolean;
+		isEditingName: boolean;
+		nameDraft: string;
+		isSavingName: boolean;
+		nameError: string;
 	}
 
 	// État pour chaque salle
@@ -43,10 +47,15 @@
 		messageText: '',
 		isSendingMessage: false,
 		messageError: '',
-		isExpanded: true
+		isExpanded: true,
+		isEditingName: false,
+		nameDraft: '',
+		isSavingName: false,
+		nameError: ''
 	})));
 
 	const MAX_MESSAGE_LENGTH = 500;
+	const MAX_NAME_LENGTH = 50;
 	let eventSources: EventSource[] = [];
 	let timerIntervals: number[] = [];
 
@@ -158,6 +167,75 @@
 		rooms[roomIndex].isExpanded = !rooms[roomIndex].isExpanded;
 	}
 
+	function startEditName(roomIndex: number) {
+		const room = rooms[roomIndex];
+		room.nameDraft = room.roomName;
+		room.nameError = '';
+		room.isEditingName = true;
+	}
+
+	function cancelEditName(roomIndex: number) {
+		rooms[roomIndex].isEditingName = false;
+		rooms[roomIndex].nameError = '';
+	}
+
+	async function saveRoomName(roomIndex: number) {
+		const room = rooms[roomIndex];
+		const trimmed = room.nameDraft.trim();
+
+		if (!trimmed) {
+			room.nameError = 'Le nom ne peut pas être vide';
+			return;
+		}
+
+		if (trimmed.length > MAX_NAME_LENGTH) {
+			room.nameError = `Le nom ne peut pas dépasser ${MAX_NAME_LENGTH} caractères`;
+			return;
+		}
+
+		// Pas de changement : fermer simplement l'édition
+		if (trimmed === room.roomName) {
+			room.isEditingName = false;
+			room.nameError = '';
+			return;
+		}
+
+		room.isSavingName = true;
+		room.nameError = '';
+
+		try {
+			const response = await fetch(`/api/gm/rooms/${room.roomId}/rename`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name: trimmed })
+			});
+
+			if (!response.ok) {
+				const err = await response.json().catch(() => ({ message: 'Erreur lors du renommage' }));
+				room.nameError = err.message || 'Erreur lors du renommage';
+				return;
+			}
+
+			room.roomName = trimmed;
+			room.isEditingName = false;
+		} catch (e) {
+			console.error('Error renaming room:', e);
+			room.nameError = 'Erreur réseau lors du renommage';
+		} finally {
+			room.isSavingName = false;
+		}
+	}
+
+	function handleNameKeydown(event: KeyboardEvent, roomIndex: number) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			saveRoomName(roomIndex);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			cancelEditName(roomIndex);
+		}
+	}
+
 	async function logout() {
 		await fetch('/gm/logout', { method: 'POST' });
 		goto('/gm/login');
@@ -216,6 +294,14 @@
 			eventSource.addEventListener('message_created', (e) => {
 				const newData = JSON.parse(e.data);
 				rooms[index].messages = [...(rooms[index].messages || []), newData];
+			});
+
+			eventSource.addEventListener('room_renamed', (e) => {
+				const newData = JSON.parse(e.data);
+				// Ne pas écraser la saisie en cours sur ce client
+				if (!rooms[index].isEditingName) {
+					rooms[index].roomName = newData.name;
+				}
 			});
 
 			eventSource.onerror = (e) => {
@@ -285,9 +371,52 @@
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
 							</svg>
 						</button>
-						<h2 class="h3 font-bold">
-							{room.roomName}
-						</h2>
+						{#if room.isEditingName}
+							<div class="flex flex-col gap-1">
+								<div class="flex items-center gap-2">
+									<!-- svelte-ignore a11y_autofocus -->
+									<input
+										class="input bg-surface-800 border border-surface-600 text-surface-100 h3 font-bold py-1 px-2 w-44"
+										bind:value={room.nameDraft}
+										onkeydown={(e) => handleNameKeydown(e, roomIndex)}
+										maxlength={MAX_NAME_LENGTH}
+										disabled={room.isSavingName}
+										autofocus
+									/>
+									<button
+										class="btn btn-sm preset-filled-success-500"
+										onclick={() => saveRoomName(roomIndex)}
+										disabled={room.isSavingName || !room.nameDraft.trim()}
+										aria-label="Enregistrer le nom"
+									>
+										{room.isSavingName ? '⏳' : '✓'}
+									</button>
+									<button
+										class="btn btn-sm preset-tonal-surface"
+										onclick={() => cancelEditName(roomIndex)}
+										disabled={room.isSavingName}
+										aria-label="Annuler"
+									>
+										✕
+									</button>
+								</div>
+								{#if room.nameError}
+									<p class="text-error-400 text-xs">❌ {room.nameError}</p>
+								{/if}
+							</div>
+						{:else}
+							<h2 class="h3 font-bold">
+								{room.roomName}
+							</h2>
+							<button
+								class="btn btn-sm preset-tonal-surface"
+								onclick={() => startEditName(roomIndex)}
+								title="Renommer la salle"
+								aria-label="Renommer la salle"
+							>
+								✏️
+							</button>
+						{/if}
 					</div>
 					<a href="/admin/gm/{room.roomId}" class="chip preset-filled-secondary-500 hover:preset-filled-primary-500 transition-all">
 						Détails →
