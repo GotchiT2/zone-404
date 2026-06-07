@@ -1,181 +1,318 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
-	import { ANTIDOTE_COMPONENTS } from '$lib/toto/escape-game-config';
-	
+	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
+	import {
+		SEARCHABLE_ITEMS,
+		ANTIDOTE_COMPONENT_COUNT,
+		searchItems,
+		findItemByName
+	} from '$lib/toto/escape-game-config';
+
 	const dispatch = createEventDispatcher();
-	
+
 	export let token;
-	
-	// Importer la configuration centralisée
-	const antidoteComponents = ANTIDOTE_COMPONENTS;
-	
-	// État des champs
-	let answers = Array(10).fill('');
-	let errorMessage = '';
-	
-	// État de validation locale (indépendant de la synchro API)
-	let validationResults = Array(10).fill(false);
-	let lockedFields = Array(10).fill(false); // Champs verrouillés individuellement
-	let animatingFields = Array(10).fill(null); // null, 'success', ou 'error'
+
+	const SLOT_COUNT = ANTIDOTE_COMPONENT_COUNT;
+
+	// Encarts de la formule : null = vide, sinon { id, name, image }
+	let slots = Array(SLOT_COUNT).fill(null);
+	let foundIds = new Set(); // ids des composants déjà trouvés
+
+	// Barre de recherche
+	let searchQuery = '';
+	let suggestions = [];
+	let showSuggestions = false;
+	let searchError = '';
+	let searchInput;
+
+	// Modale produit
+	let modalItem = null; // SearchableItem affiché dans la modale
+	let modalFeedback = null; // { type: 'success' | 'error' | 'info', message }
+	let isValidating = false;
+
+	// Synchronisation API + fin d'étape
+	let syncedTrials = new Set();
 	let isComplete = false;
-	
-	// État de synchronisation API (robuste contre les doublons)
-	let syncedComponents = new Set();
-	let isSyncing = false;
-	
-	// Références aux inputs pour la navigation
-	let inputRefs = [];
-	
-	// Calculer la progression
-	$: filledCount = validationResults.filter(Boolean).length;
-	$: progressPercent = (filledCount / 10) * 100;
-	
-	function normalizeAnswer(answer) {
-		return answer.toLowerCase().trim();
-	}
-	
+
+	// Timer en direct de la salle "salle-3" (flux SSE public)
+	const TIMER_ROOM_ID = 'salle-3';
+	let roomTime = '--:--';
+	let timerStatus = 'IDLE';
+	let timerEndTimestamp = null;
+	let lastRemainingMs = 0;
+	let totalMs = 0; // durée totale estimée (max de temps restant observé)
+	let timerEventSource = null;
+	let timerInterval = null;
+	let timerReconnectTimeout = null;
+
+	// Compteur d'êtres humains vivants : décroît avec le temps jusqu'à ~5
+	const START_POPULATION = 8_000_000_000;
+	const MIN_POPULATION = 5;
+	let population = START_POPULATION;
+
+	$: populationDisplay = population.toLocaleString('fr-FR');
+	$: populationPercent = totalMs > 0 ? Math.min(100, (population / START_POPULATION) * 100) : 100;
+
 	/**
-	 * Synchronise un composant validé avec l'API
-	 * Garantie : un composant ne sera synchronisé qu'une seule fois
+	 * Interpolation géométrique : population = MIN * (START/MIN)^fraction.
+	 * fraction = tempsRestant / tempsTotal (1 au début, 0 à la fin).
+	 * Garantit une convergence vers MIN_POPULATION quand le temps tend vers 0.
 	 */
-	async function syncComponentToAPI(componentId, trialIndex) {
-		// SÉCURITÉ 1 : Éviter les appels multiples pour le même composant
-		if (syncedComponents.has(componentId)) {
-			console.log(`Component ${componentId} already synced, skipping`);
-			return true; // Déjà synchronisé = succès
+	function computePopulation(remainingMs) {
+		if (totalMs <= 0) return START_POPULATION;
+		const fraction = Math.min(1, Math.max(0, remainingMs / totalMs));
+		const pop = MIN_POPULATION * Math.pow(START_POPULATION / MIN_POPULATION, fraction);
+		return Math.max(MIN_POPULATION, Math.round(pop));
+	}
+
+	$: filledCount = slots.filter(Boolean).length;
+	$: progressPercent = (filledCount / SLOT_COUNT) * 100;
+
+	function formatTime(ms) {
+		const totalSeconds = Math.floor(ms / 1000);
+		const hours = Math.floor(totalSeconds / 3600);
+		const minutes = Math.floor((totalSeconds % 3600) / 60);
+		const seconds = totalSeconds % 60;
+
+		if (hours > 0) {
+			return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 		}
-		
+		return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+
+	function updateRoomTimer() {
+		let remaining;
+		if (timerStatus === 'RUNNING' && timerEndTimestamp) {
+			remaining = Math.max(0, timerEndTimestamp - Date.now());
+			lastRemainingMs = remaining;
+		} else {
+			remaining = lastRemainingMs;
+		}
+		roomTime = formatTime(remaining);
+		population = computePopulation(remaining);
+	}
+
+	function handleTimerState(event) {
+		timerStatus = event.status;
+		lastRemainingMs = event.remainingMs;
+		// La plus grande valeur observée approxime la durée totale du timer
+		totalMs = Math.max(totalMs, event.remainingMs);
+
+		if (event.status === 'RUNNING' && event.endsAt) {
+			timerEndTimestamp = new Date(event.endsAt).getTime();
+		} else {
+			timerEndTimestamp = null;
+		}
+
+		updateRoomTimer();
+	}
+
+	function setupTimerSSE() {
+		if (!browser) return;
+
+		if (timerEventSource) timerEventSource.close();
+		if (timerInterval) clearInterval(timerInterval);
+
+		timerEventSource = new EventSource(`/api/rooms/${TIMER_ROOM_ID}/events`);
+
+		timerEventSource.addEventListener('timer_state', (e) => {
+			try {
+				handleTimerState(JSON.parse(e.data));
+			} catch (err) {
+				console.error('Timer state parse error:', err);
+			}
+		});
+
+		timerEventSource.onerror = () => {
+			// Reconnexion après un délai (ex: pas de run active sur salle-3)
+			timerEventSource?.close();
+			timerReconnectTimeout = setTimeout(() => {
+				if (browser) setupTimerSSE();
+			}, 5000);
+		};
+
+		updateRoomTimer();
+		timerInterval = setInterval(updateRoomTimer, 250);
+	}
+
+	function onSearchInput() {
+		searchError = '';
+		suggestions = searchItems(searchQuery);
+		showSuggestions = suggestions.length > 0;
+	}
+
+	function selectSuggestion(item) {
+		searchQuery = item.name;
+		showSuggestions = false;
+		openModal(item);
+	}
+
+	function submitSearch() {
+		if (isComplete) return;
+
+		// Correspondance exacte en priorité, sinon meilleure suggestion
+		const exact = findItemByName(searchQuery);
+		const item = exact || searchItems(searchQuery)[0];
+
+		if (!item) {
+			searchError = `Aucun résultat pour « ${searchQuery.trim()} ».`;
+			return;
+		}
+
+		showSuggestions = false;
+		openModal(item);
+	}
+
+	function openModal(item) {
+		modalItem = item;
+		modalFeedback = null;
+		isValidating = false;
+	}
+
+	function closeModal() {
+		modalItem = null;
+		modalFeedback = null;
+		setTimeout(() => searchInput?.focus(), 0);
+	}
+
+	async function validateModal() {
+		if (!modalItem || isValidating) return;
+
+		// Mauvaise réponse (leurre)
+		if (!modalItem.isComponent) {
+			modalFeedback = {
+				type: 'error',
+				message: "Ce produit ne fait pas partie de la formule de l'antidote."
+			};
+			return;
+		}
+
+		// Déjà trouvé
+		if (foundIds.has(modalItem.id)) {
+			modalFeedback = {
+				type: 'info',
+				message: 'Ce composant a déjà été ajouté à la formule.'
+			};
+			return;
+		}
+
+		// Bonne réponse : remplir un encart
+		isValidating = true;
+		foundIds = new Set(foundIds).add(modalItem.id);
+
+		const emptyIndex = slots.findIndex((s) => s === null);
+		if (emptyIndex !== -1) {
+			slots[emptyIndex] = {
+				id: modalItem.id,
+				name: modalItem.name,
+				image: modalItem.image
+			};
+			slots = slots;
+		}
+
+		modalFeedback = {
+			type: 'success',
+			message: `${modalItem.name} ajouté à la formule !`
+		};
+
+		// Synchroniser avec l'API
+		await syncTrial(modalItem.trialIndex);
+
+		// Fermer la modale après un court délai et réinitialiser la recherche
+		setTimeout(() => {
+			searchQuery = '';
+			suggestions = [];
+			closeModal();
+			checkComplete();
+		}, 1200);
+	}
+
+	function checkComplete() {
+		const count = slots.filter(Boolean).length;
+		if (count >= SLOT_COUNT && !isComplete) {
+			isComplete = true;
+			setTimeout(() => dispatch('complete'), 2000);
+		}
+	}
+
+	async function syncTrial(trialIndex) {
+		if (trialIndex == null || syncedTrials.has(trialIndex)) return;
+
 		try {
 			const response = await fetch('/api/escape-game/validate-trial', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					token,
-					trialIndex,
-					validated: true
-				})
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ token, trialIndex, validated: true })
 			});
-			
+
 			if (response.ok) {
-				// SÉCURITÉ 2 : Marquer comme synchronisé uniquement en cas de succès
-				syncedComponents.add(componentId);
-				console.log(`Component ${componentId} synced successfully`);
-				return true;
+				syncedTrials.add(trialIndex);
 			} else {
-				console.error(`Failed to sync component ${componentId}: HTTP ${response.status}`);
-				return false;
+				console.error(`Failed to sync trial ${trialIndex}: HTTP ${response.status}`);
 			}
 		} catch (err) {
-			console.error(`Error syncing component ${componentId}:`, err);
-			return false;
+			console.error(`Error syncing trial ${trialIndex}:`, err);
 		}
 	}
-	
-	/**
-	 * Valide un champ individuel
-	 */
-	async function validateField(index) {
-		if (lockedFields[index]) return; // Déjà validé
-		
-		const answer = normalizeAnswer(answers[index]);
-		const expectedAnswer = antidoteComponents[index].answer;
-		const isCorrect = answer === expectedAnswer;
-		
-		if (isCorrect) {
-			// Animation de succès
-			animatingFields[index] = 'success';
-			validationResults[index] = true;
-			lockedFields[index] = true;
-			
-			// Synchroniser avec l'API
-			const component = antidoteComponents[index];
-			if (!syncedComponents.has(component.id)) {
-				await syncComponentToAPI(component.id, component.trialIndex);
-			}
-			
-			// Retirer l'animation après un délai
-			setTimeout(() => {
-				animatingFields[index] = null;
-			}, 600);
-			
-			// Vérifier si tous les champs sont validés
-			if (validationResults.every(Boolean)) {
-				isComplete = true;
-				errorMessage = '';
-				
-				// Délai avant de passer à l'étape suivante
-				setTimeout(() => {
-					dispatch('complete');
-				}, 2000);
-			}
-		} else {
-			// Animation d'erreur
-			animatingFields[index] = 'error';
-			
-			// Vider le champ après l'animation
-			setTimeout(() => {
-				answers[index] = '';
-				animatingFields[index] = null;
-			}, 400);
-		}
-	}
-	
-	/**
-	 * Gestion de la navigation au clavier
-	 */
-	function handleKeyDown(event, index) {
-		const { key } = event;
-		
-		// Validation avec Entrée
-		if (key === 'Enter') {
+
+	function handleSearchKeydown(event) {
+		// Si la modale est ouverte, on laisse la fenêtre gérer Entrée/Échap
+		if (modalItem) return;
+
+		if (event.key === 'Enter') {
 			event.preventDefault();
-			validateField(index);
-			return;
+			event.stopPropagation();
+			submitSearch();
+		} else if (event.key === 'Escape') {
+			showSuggestions = false;
 		}
-		
-		// Navigation avec Tab (comportement natif, mais on peut l'améliorer)
-		if (key === 'Tab') {
-			// Le comportement par défaut du Tab est déjà bon
-			return;
-		}
-		
-		// Navigation avec flèches
-		if (key === 'ArrowDown' || key === 'ArrowRight') {
+	}
+
+	function handleWindowKeydown(event) {
+		if (!modalItem) return;
+
+		if (event.key === 'Escape') {
 			event.preventDefault();
-			focusNextField(index);
-		} else if (key === 'ArrowUp' || key === 'ArrowLeft') {
+			closeModal();
+		} else if (event.key === 'Enter') {
 			event.preventDefault();
-			focusPreviousField(index);
+			validateModal();
 		}
 	}
-	
-	/**
-	 * Focus sur le champ suivant
-	 */
-	function focusNextField(currentIndex) {
-		const nextIndex = (currentIndex + 1) % 10;
-		if (inputRefs[nextIndex]) {
-			inputRefs[nextIndex].focus();
-		}
+
+	function hideSuggestionsSoon() {
+		// Laisse le temps au clic sur une suggestion de s'enregistrer
+		setTimeout(() => (showSuggestions = false), 150);
 	}
-	
-	/**
-	 * Focus sur le champ précédent
-	 */
-	function focusPreviousField(currentIndex) {
-		const prevIndex = (currentIndex - 1 + 10) % 10;
-		if (inputRefs[prevIndex]) {
-			inputRefs[prevIndex].focus();
-		}
-	}
-	
-	// Fonction debug pour pré-remplir (à retirer en prod)
+
+	// Debug : pré-remplir tous les composants (à retirer en prod)
 	function fillDebug() {
-		answers = antidoteComponents.map(c => c.answer);
+		for (const item of SEARCHABLE_ITEMS.filter((i) => i.isComponent)) {
+			if (foundIds.has(item.id)) continue;
+			foundIds = new Set(foundIds).add(item.id);
+			const idx = slots.findIndex((s) => s === null);
+			if (idx !== -1) {
+				slots[idx] = { id: item.id, name: item.name, image: item.image };
+			}
+			syncTrial(item.trialIndex);
+		}
+		slots = slots;
+		checkComplete();
 	}
+
+	onMount(() => {
+		searchInput?.focus();
+		setupTimerSSE();
+	});
+
+	onDestroy(() => {
+		if (timerEventSource) timerEventSource.close();
+		if (timerInterval) clearInterval(timerInterval);
+		if (timerReconnectTimeout) clearTimeout(timerReconnectTimeout);
+	});
 </script>
+
+<svelte:window on:keydown={handleWindowKeydown} />
 
 <div class="antidote-stage">
 	<div class="antidote-layout">
@@ -185,84 +322,122 @@
 			<div class="breadcrumb">
 				&gt; LAB-OMEGA / SYNTHÈSE EN COURS
 			</div>
-			
+
 			<!-- Header -->
 			<div class="stage-header">
 				<h1 class="stage-title">FORMULE D'ANTIDOTE</h1>
 				<p class="stage-description">
 					Le système est de nouveau opérationnel. Reconstituez la formule de l'antidote
-					du virus Vaïk-17 en identifiant les 10 composants moléculaires nécessaires.
-					<strong>Validez chaque champ avec la touche Entrée.</strong>
+					du virus Vaïk-17 en identifiant les {SLOT_COUNT} composants moléculaires nécessaires.
+					<strong>Recherchez un composant, puis validez votre choix.</strong>
 				</p>
 			</div>
-			
+
 			<!-- Progress -->
 			<div class="progress-section">
 				<div class="progress-header">
 					<span class="progress-label">PROGRESSION DE LA SYNTHÈSE</span>
-					<span class="progress-count">{filledCount}/10 composants</span>
+					<span class="progress-count">{filledCount}/{SLOT_COUNT} composants</span>
 				</div>
 				<div class="progress-bar">
 					<div class="progress-fill" style="width: {progressPercent}%"></div>
 				</div>
 			</div>
-			
-			<!-- Formula Card -->
+
+			<!-- Search -->
+			<div class="search-section">
+				<div class="search-box">
+					<span class="search-icon">🔍</span>
+					<input
+						bind:this={searchInput}
+						bind:value={searchQuery}
+						on:input={onSearchInput}
+						on:keydown={handleSearchKeydown}
+						on:focus={onSearchInput}
+						on:blur={hideSuggestionsSoon}
+						class="search-input"
+						type="text"
+						placeholder="Rechercher un composant… (3 lettres minimum)"
+						autocomplete="off"
+						spellcheck="false"
+						disabled={isComplete}
+					/>
+					<button
+						class="search-btn"
+						on:click={submitSearch}
+						disabled={isComplete || !searchQuery.trim()}
+					>
+						Valider
+					</button>
+
+					{#if showSuggestions}
+						<ul class="suggestions">
+							{#each suggestions as item (item.id)}
+								<li>
+									<button class="suggestion" on:mousedown|preventDefault={() => selectSuggestion(item)}>
+										<span class="suggestion-icon">🔎</span>
+										{item.name}
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+				{#if searchError}
+					<p class="search-error">⚠ {searchError}</p>
+				{/if}
+			</div>
+
+			<!-- Formula Cards -->
 			<div class="formula-card">
-				<div class="inputs-grid">
-					{#each answers as answer, index}
-						<div class="input-group">
-							<label for="component-{index}" class="input-label">
-								<span class="label-indicator"></span>
-								<span class="label-text">COMPOSANT {(index + 1).toString().padStart(2, '0')}</span>
-								{#if validationResults[index]}
-									<span class="validation-badge validation-success">✓</span>
-								{/if}
-							</label>
-							<input
-								id="component-{index}"
-								type="text"
-								bind:value={answers[index]}
-								bind:this={inputRefs[index]}
-								disabled={lockedFields[index] || isComplete}
-								placeholder={antidoteComponents[index].hint || "Élément chimique..."}
-								on:keydown={(e) => handleKeyDown(e, index)}
-								class="formula-input"
-								class:input-valid={validationResults[index]}
-								class:input-disabled={lockedFields[index] || isComplete}
-								class:animate-success={animatingFields[index] === 'success'}
-								class:animate-error={animatingFields[index] === 'error'}
-							/>
+				<div class="cards-grid">
+					{#each slots as slot, index}
+						<div class="component-card" class:filled={slot}>
+							{#if slot}
+								<div class="card-thumb">
+									{#if slot.image}
+										<img src={slot.image} alt={slot.name} />
+									{:else}
+										<span class="card-thumb-placeholder">🧪</span>
+									{/if}
+								</div>
+								<span class="card-name">{slot.name}</span>
+								<span class="card-check">✓</span>
+							{:else}
+								<span class="card-index">{(index + 1).toString().padStart(2, '0')}</span>
+								<span class="card-empty-label">Composant manquant</span>
+							{/if}
 						</div>
 					{/each}
 				</div>
 			</div>
-			
+
 			<!-- Info Panel -->
 			<div class="info-panel">
 				<span class="info-icon">ℹ</span>
 				<div class="info-content">
-					<p class="info-title">Navigation et validation</p>
+					<p class="info-title">Comment procéder</p>
 					<p class="info-text">
-						<strong>Entrée</strong> : valider le champ • 
-						<strong>Tab</strong> : champ suivant • 
-						<strong>↑↓←→</strong> : naviguer entre les champs
+						Tapez le nom d'un composant dans la barre de recherche. Après
+						<strong>3 lettres</strong>, des suggestions apparaissent. Sélectionnez-en une
+						ou validez votre saisie pour ouvrir sa fiche, puis confirmez avec
+						<strong>Entrée</strong>.
 					</p>
 				</div>
 			</div>
-			
+
 			<!-- Warning Panel -->
 			<div class="warning-panel">
 				<span class="warning-icon">⚠</span>
 				<div class="warning-content">
 					<p class="warning-title">Contrainte de compatibilité moléculaire</p>
 					<p class="warning-text">
-						Les composants doivent être identifiés avec précision. Toute erreur dans la séquence
-						pourrait compromettre l'efficacité de l'antidote.
+						Les composants doivent être identifiés avec précision. Seuls les éléments
+						faisant réellement partie de l'antidote pourront être intégrés à la formule.
 					</p>
 				</div>
 			</div>
-			
+
 			<!-- Messages -->
 			{#if isComplete}
 				<div class="message message-success">
@@ -270,7 +445,7 @@
 					<p>Antidote synthétisé avec succès ! Transfert vers l'analyse finale...</p>
 				</div>
 			{/if}
-			
+
 			<!-- Debug button (hidden by default) -->
 			<button
 				on:click={fillDebug}
@@ -280,22 +455,22 @@
 				🔧
 			</button>
 		</div>
-		
+
 		<!-- Sidebar Monitoring -->
 		<aside class="monitoring-sidebar">
 			<div class="sidebar-header">
 				<span class="sidebar-status">ÉTAT CRITIQUE</span>
 			</div>
-			
+
 			<div class="monitoring-metrics">
 				<div class="metric">
-					<span class="metric-label">Contamination</span>
-					<span class="metric-value metric-danger">87%</span>
+					<span class="metric-label">Êtres humains vivants</span>
+					<span class="metric-value metric-danger metric-population">{populationDisplay}</span>
 					<div class="metric-bar">
-						<div class="metric-fill metric-fill-danger" style="width: 87%"></div>
+						<div class="metric-fill metric-fill-danger" style="width: {populationPercent}%"></div>
 					</div>
 				</div>
-				
+
 				<div class="metric">
 					<span class="metric-label">Intégrité système</span>
 					<span class="metric-value metric-warning">34%</span>
@@ -303,18 +478,18 @@
 						<div class="metric-fill metric-fill-warning" style="width: 34%"></div>
 					</div>
 				</div>
-				
+
 				<div class="metric">
 					<span class="metric-label">Temps restant</span>
-					<span class="metric-value metric-cyan">14:23</span>
+					<span class="metric-value" class:metric-cyan={timerStatus !== 'PAUSED'} class:metric-warning={timerStatus === 'PAUSED'}>{roomTime}</span>
 				</div>
-				
+
 				<div class="metric">
 					<span class="metric-label">Statut protocole</span>
 					<span class="metric-value metric-success">EN COURS</span>
 				</div>
 			</div>
-			
+
 			<div class="sidebar-graph">
 				<svg viewBox="0 0 200 60" class="mini-graph">
 					<polyline
@@ -330,11 +505,50 @@
 	</div>
 </div>
 
+<!-- Modale produit -->
+{#if modalItem}
+	<div class="modal-overlay" on:click={closeModal} role="presentation">
+		<div class="modal" on:click|stopPropagation role="dialog" aria-modal="true">
+			<button class="modal-close" on:click={closeModal} aria-label="Fermer">✕</button>
+
+			<div class="modal-image">
+				{#if modalItem.image}
+					<img src={modalItem.image} alt={modalItem.name} />
+				{:else}
+					<span class="modal-image-placeholder">🧪</span>
+				{/if}
+			</div>
+
+			<h3 class="modal-title">{modalItem.name}</h3>
+			<p class="modal-description">{modalItem.description}</p>
+
+			{#if modalFeedback}
+				<div class="modal-feedback modal-feedback-{modalFeedback.type}">
+					{modalFeedback.message}
+				</div>
+			{/if}
+
+			<div class="modal-actions">
+				<button class="modal-btn modal-btn-secondary" on:click={closeModal}>
+					Annuler <kbd>Échap</kbd>
+				</button>
+				<button
+					class="modal-btn modal-btn-primary"
+					on:click={validateModal}
+					disabled={isValidating}
+				>
+					Valider <kbd>Entrée</kbd>
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.antidote-stage {
 		width: 100%;
 	}
-	
+
 	.antidote-layout {
 		display: grid;
 		grid-template-columns: 1fr 320px;
@@ -342,12 +556,12 @@
 		max-width: 1400px;
 		margin: 0 auto;
 	}
-	
+
 	/* Main Content */
 	.main-content {
 		min-width: 0;
 	}
-	
+
 	/* Breadcrumb */
 	.breadcrumb {
 		font-family: var(--font-mono);
@@ -357,12 +571,12 @@
 		color: var(--text-muted);
 		margin-bottom: var(--spacing-xl);
 	}
-	
+
 	/* Stage Header */
 	.stage-header {
 		margin-bottom: var(--spacing-2xl);
 	}
-	
+
 	.stage-title {
 		font-size: 56px;
 		font-weight: 700;
@@ -371,7 +585,7 @@
 		line-height: 1.1;
 		letter-spacing: -0.02em;
 	}
-	
+
 	.stage-description {
 		max-width: 700px;
 		font-size: 15px;
@@ -379,23 +593,23 @@
 		color: var(--text-secondary);
 		margin: 0;
 	}
-	
+
 	.stage-description strong {
 		color: var(--accent-cyan);
 	}
-	
+
 	/* Progress Section */
 	.progress-section {
 		margin-bottom: var(--spacing-xl);
 	}
-	
+
 	.progress-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: var(--spacing-sm);
 	}
-	
+
 	.progress-label {
 		font-family: var(--font-mono);
 		font-size: 11px;
@@ -404,14 +618,14 @@
 		color: var(--text-muted);
 		font-weight: 600;
 	}
-	
+
 	.progress-count {
 		font-family: var(--font-mono);
 		font-size: 13px;
 		color: var(--accent-cyan);
 		font-weight: 600;
 	}
-	
+
 	.progress-bar {
 		height: 6px;
 		background: var(--bg-panel);
@@ -419,13 +633,131 @@
 		overflow: hidden;
 		border: 1px solid var(--border-color);
 	}
-	
+
 	.progress-fill {
 		height: 100%;
 		background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
 		transition: width 0.3s ease;
 	}
-	
+
+	/* Search */
+	.search-section {
+		margin-bottom: var(--spacing-xl);
+	}
+
+	.search-box {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		background: var(--bg-panel);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		padding: 8px 8px 8px 16px;
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.search-box:focus-within {
+		border-color: var(--accent-cyan);
+		box-shadow: 0 0 0 3px var(--cyan-soft);
+	}
+
+	.search-icon {
+		font-size: 16px;
+		opacity: 0.7;
+		flex-shrink: 0;
+	}
+
+	.search-input {
+		flex: 1;
+		min-width: 0;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--text-primary);
+		font-size: 15px;
+		font-family: var(--font-ui);
+		padding: 6px 0;
+	}
+
+	.search-input::placeholder {
+		color: var(--text-muted);
+	}
+
+	.search-btn {
+		flex-shrink: 0;
+		padding: 10px 20px;
+		background: var(--accent-cyan);
+		color: #020617;
+		border: none;
+		border-radius: var(--radius);
+		font-weight: 600;
+		font-size: 14px;
+		cursor: pointer;
+		transition: background 0.2s ease, opacity 0.2s ease;
+	}
+
+	.search-btn:hover:not(:disabled) {
+		background: #5cefff;
+	}
+
+	.search-btn:disabled {
+		background: var(--bg-panel-light);
+		color: var(--text-muted);
+		cursor: not-allowed;
+	}
+
+	/* Suggestions */
+	.suggestions {
+		position: absolute;
+		top: calc(100% + 6px);
+		left: 0;
+		right: 0;
+		z-index: 50;
+		margin: 0;
+		padding: 6px;
+		list-style: none;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+		max-height: 280px;
+		overflow-y: auto;
+	}
+
+	.suggestion {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		width: 100%;
+		text-align: left;
+		padding: 10px 12px;
+		background: transparent;
+		border: none;
+		border-radius: 6px;
+		color: var(--text-primary);
+		font-size: 14px;
+		font-family: var(--font-ui);
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.suggestion:hover {
+		background: var(--cyan-soft);
+		color: var(--accent-cyan);
+	}
+
+	.suggestion-icon {
+		font-size: 12px;
+		opacity: 0.6;
+	}
+
+	.search-error {
+		margin: var(--spacing-sm) 0 0 0;
+		font-size: 13px;
+		color: var(--accent-red);
+	}
+
 	/* Formula Card */
 	.formula-card {
 		background: var(--bg-secondary);
@@ -434,101 +766,92 @@
 		padding: var(--spacing-2xl);
 		margin-bottom: var(--spacing-xl);
 	}
-	
-	.inputs-grid {
+
+	.cards-grid {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
 		gap: var(--spacing-lg);
 	}
-	
-	.input-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm);
-	}
-	
-	.input-label {
+
+	.component-card {
+		position: relative;
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-sm);
+		gap: var(--spacing-md);
+		min-height: 72px;
+		padding: var(--spacing-md);
+		background: var(--bg-panel);
+		border: 1px dashed var(--border-color);
+		border-radius: var(--radius);
+		transition: all 0.3s ease;
+	}
+
+	.component-card.filled {
+		border-style: solid;
+		border-color: var(--accent-green);
+		background: rgba(0, 255, 163, 0.05);
+		animation: successPulse 0.6s ease-out;
+	}
+
+	.card-index {
+		font-family: var(--font-mono);
+		font-size: 20px;
+		font-weight: 700;
+		color: var(--text-muted);
+		width: 32px;
+		text-align: center;
+		flex-shrink: 0;
+	}
+
+	.card-empty-label {
 		font-family: var(--font-mono);
 		font-size: 11px;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		color: var(--text-muted);
-		font-weight: 600;
 	}
-	
-	.label-indicator {
-		width: 6px;
-		height: 6px;
-		background: var(--border-color);
-		border-radius: 50%;
-	}
-	
-	.label-text {
-		flex: 1;
-	}
-	
-	.validation-badge {
-		font-size: 12px;
-		padding: 2px 6px;
-		border-radius: 3px;
-		font-weight: 600;
-	}
-	
-	.validation-success {
-		background: var(--green-soft);
-		color: var(--accent-green);
-	}
-	
-	.validation-error {
-		background: var(--red-soft);
-		color: var(--accent-red);
-	}
-	
-	.formula-input {
-		width: 100%;
-		padding: 12px 16px;
-		background: var(--bg-panel);
+
+	.card-thumb {
+		width: 48px;
+		height: 48px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: var(--radius);
+		border-radius: 6px;
+		overflow: hidden;
+	}
+
+	.card-thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.card-thumb-placeholder {
+		font-size: 22px;
+	}
+
+	.card-name {
+		flex: 1;
+		font-size: 15px;
+		font-weight: 600;
 		color: var(--text-primary);
-		font-size: 14px;
-		font-family: var(--font-ui);
-		transition: all 0.2s ease;
 	}
-	
-	.formula-input:focus {
-		outline: none;
-		border-color: var(--accent-cyan);
-		box-shadow: 0 0 0 3px var(--cyan-soft);
+
+	.card-check {
+		flex-shrink: 0;
+		color: var(--accent-green);
+		font-size: 18px;
+		font-weight: 700;
 	}
-	
-	.formula-input::placeholder {
-		color: var(--text-muted);
-	}
-	
-	.input-valid {
-		border-color: var(--accent-green);
-		background: rgba(0, 255, 163, 0.05);
-	}
-	
-	.input-valid:focus {
-		border-color: var(--accent-green);
-		box-shadow: 0 0 0 3px var(--green-soft);
-	}
-	
-	.input-disabled {
-		cursor: not-allowed;
-		opacity: 0.6;
-	}
-	
+
 	/* Animations */
 	@keyframes successPulse {
 		0% {
 			transform: scale(1);
-			border-color: var(--accent-green);
 			box-shadow: 0 0 0 0 rgba(0, 255, 163, 0.7);
 		}
 		50% {
@@ -537,11 +860,10 @@
 		}
 		100% {
 			transform: scale(1);
-			border-color: var(--accent-green);
 			box-shadow: 0 0 0 0 rgba(0, 255, 163, 0);
 		}
 	}
-	
+
 	@keyframes errorShake {
 		0%, 100% {
 			transform: translateX(0);
@@ -553,18 +875,7 @@
 			transform: translateX(4px);
 		}
 	}
-	
-	.animate-success {
-		animation: successPulse 0.6s ease-out;
-		border-color: var(--accent-green) !important;
-	}
-	
-	.animate-error {
-		animation: errorShake 0.4s ease-out;
-		border-color: var(--accent-red) !important;
-		background: rgba(255, 77, 77, 0.1) !important;
-	}
-	
+
 	/* Info Panel */
 	.info-panel {
 		display: flex;
@@ -576,30 +887,30 @@
 		border-radius: var(--radius);
 		margin-bottom: var(--spacing-lg);
 	}
-	
+
 	.info-icon {
 		font-size: 20px;
 		color: var(--accent-cyan);
 	}
-	
+
 	.info-content {
 		flex: 1;
 	}
-	
+
 	.info-title {
 		font-size: 13px;
 		font-weight: 600;
 		color: var(--accent-cyan);
 		margin: 0 0 var(--spacing-xs) 0;
 	}
-	
+
 	.info-text {
 		font-size: 13px;
 		line-height: 1.6;
 		color: var(--text-secondary);
 		margin: 0;
 	}
-	
+
 	.info-text strong {
 		color: var(--text-primary);
 		font-family: var(--font-mono);
@@ -609,7 +920,7 @@
 		border-radius: 3px;
 		border: 1px solid var(--border-color);
 	}
-	
+
 	/* Warning Panel */
 	.warning-panel {
 		display: flex;
@@ -621,30 +932,30 @@
 		border-radius: var(--radius);
 		margin-bottom: var(--spacing-lg);
 	}
-	
+
 	.warning-icon {
 		font-size: 20px;
 		color: var(--accent-orange);
 	}
-	
+
 	.warning-content {
 		flex: 1;
 	}
-	
+
 	.warning-title {
 		font-size: 13px;
 		font-weight: 600;
 		color: var(--accent-orange);
 		margin: 0 0 var(--spacing-xs) 0;
 	}
-	
+
 	.warning-text {
 		font-size: 13px;
 		line-height: 1.6;
 		color: var(--text-secondary);
 		margin: 0;
 	}
-	
+
 	/* Messages */
 	.message {
 		display: flex;
@@ -656,27 +967,21 @@
 		margin-bottom: var(--spacing-lg);
 		border: 1px solid;
 	}
-	
-	.message-error {
-		background: var(--red-soft);
-		border-color: rgba(255, 77, 77, 0.3);
-		color: var(--accent-red);
-	}
-	
+
 	.message-success {
 		background: var(--green-soft);
 		border-color: rgba(0, 255, 163, 0.3);
 		color: var(--accent-green);
 	}
-	
+
 	.message-icon {
 		font-size: 18px;
 	}
-	
+
 	.message p {
 		margin: 0;
 	}
-	
+
 	/* Debug Button */
 	.btn-debug {
 		position: fixed;
@@ -692,11 +997,197 @@
 		opacity: 0.3;
 		transition: opacity 0.2s;
 	}
-	
+
 	.btn-debug:hover {
 		opacity: 1;
 	}
-	
+
+	/* Modale */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 1000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: var(--spacing-lg);
+		background: rgba(2, 6, 23, 0.8);
+		backdrop-filter: blur(4px);
+		animation: fadeIn 0.2s ease-out;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	.modal {
+		position: relative;
+		width: 100%;
+		max-width: 440px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		padding: var(--spacing-2xl);
+		box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+		animation: modalIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	@keyframes modalIn {
+		from {
+			opacity: 0;
+			transform: translateY(12px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	.modal-close {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		width: 32px;
+		height: 32px;
+		background: var(--bg-panel);
+		border: 1px solid var(--border-color);
+		border-radius: 50%;
+		color: var(--text-secondary);
+		font-size: 14px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.modal-close:hover {
+		color: var(--accent-red);
+		border-color: var(--accent-red);
+	}
+
+	.modal-image {
+		width: 100%;
+		height: 200px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-panel);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		overflow: hidden;
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.modal-image img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.modal-image-placeholder {
+		font-size: 64px;
+		opacity: 0.5;
+	}
+
+	.modal-title {
+		font-size: 24px;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0 0 var(--spacing-sm) 0;
+	}
+
+	.modal-description {
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+		margin: 0 0 var(--spacing-lg) 0;
+	}
+
+	.modal-feedback {
+		padding: var(--spacing-sm) var(--spacing-md);
+		border-radius: var(--radius);
+		font-size: 14px;
+		font-weight: 500;
+		margin-bottom: var(--spacing-lg);
+		border: 1px solid;
+		animation: errorShake 0.4s ease-out;
+	}
+
+	.modal-feedback-success {
+		background: var(--green-soft);
+		border-color: rgba(0, 255, 163, 0.3);
+		color: var(--accent-green);
+		animation: successPulse 0.6s ease-out;
+	}
+
+	.modal-feedback-error {
+		background: var(--red-soft);
+		border-color: rgba(255, 77, 77, 0.3);
+		color: var(--accent-red);
+	}
+
+	.modal-feedback-info {
+		background: var(--cyan-soft);
+		border-color: rgba(0, 229, 255, 0.3);
+		color: var(--accent-cyan);
+		animation: none;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: var(--spacing-sm);
+		justify-content: flex-end;
+	}
+
+	.modal-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 18px;
+		border-radius: var(--radius);
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		border: 1px solid var(--border-color);
+		transition: all 0.2s ease;
+	}
+
+	.modal-btn kbd {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		padding: 2px 5px;
+		border-radius: 3px;
+		background: rgba(0, 0, 0, 0.25);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+	}
+
+	.modal-btn-secondary {
+		background: var(--bg-panel);
+		color: var(--text-secondary);
+	}
+
+	.modal-btn-secondary:hover {
+		color: var(--text-primary);
+	}
+
+	.modal-btn-primary {
+		background: var(--accent-cyan);
+		color: #020617;
+		border-color: var(--accent-cyan);
+	}
+
+	.modal-btn-primary:hover:not(:disabled) {
+		background: #5cefff;
+	}
+
+	.modal-btn-primary:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
 	/* Monitoring Sidebar */
 	.monitoring-sidebar {
 		background: var(--bg-secondary);
@@ -707,11 +1198,11 @@
 		position: sticky;
 		top: var(--spacing-xl);
 	}
-	
+
 	.sidebar-header {
 		margin-bottom: var(--spacing-xl);
 	}
-	
+
 	.sidebar-status {
 		display: inline-block;
 		font-family: var(--font-mono);
@@ -725,20 +1216,20 @@
 		border-radius: 4px;
 		font-weight: 600;
 	}
-	
+
 	.monitoring-metrics {
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-xl);
 		margin-bottom: var(--spacing-2xl);
 	}
-	
+
 	.metric {
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-sm);
 	}
-	
+
 	.metric-label {
 		font-family: var(--font-mono);
 		font-size: 11px;
@@ -747,97 +1238,107 @@
 		color: var(--text-muted);
 		font-weight: 600;
 	}
-	
+
 	.metric-value {
 		font-family: var(--font-mono);
 		font-size: 24px;
 		font-weight: 700;
 		line-height: 1;
 	}
-	
+
 	.metric-danger {
 		color: var(--accent-red);
 	}
-	
+
+	.metric-population {
+		font-size: 20px;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.01em;
+	}
+
 	.metric-warning {
 		color: var(--accent-orange);
 	}
-	
+
 	.metric-cyan {
 		color: var(--accent-cyan);
 	}
-	
+
 	.metric-success {
 		color: var(--accent-green);
 	}
-	
+
 	.metric-bar {
 		height: 4px;
 		background: var(--bg-panel);
 		border-radius: 2px;
 		overflow: hidden;
 	}
-	
+
 	.metric-fill {
 		height: 100%;
 		border-radius: 2px;
 		transition: width 0.3s ease;
 	}
-	
+
 	.metric-fill-danger {
 		background: var(--accent-red);
 	}
-	
+
 	.metric-fill-warning {
 		background: var(--accent-orange);
 	}
-	
+
 	.sidebar-graph {
 		padding: var(--spacing-md);
 		background: var(--bg-panel);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius);
 	}
-	
+
 	.mini-graph {
 		width: 100%;
 		height: auto;
 	}
-	
+
 	/* Responsive */
 	@media (max-width: 1200px) {
 		.antidote-layout {
 			grid-template-columns: 1fr 280px;
 			gap: var(--spacing-xl);
 		}
-		
-		.inputs-grid {
+
+		.cards-grid {
 			grid-template-columns: 1fr;
 		}
 	}
-	
+
 	@media (max-width: 1024px) {
 		.antidote-layout {
 			grid-template-columns: 1fr;
 		}
-		
+
 		.monitoring-sidebar {
 			position: relative;
 			top: 0;
 		}
 	}
-	
+
 	@media (max-width: 768px) {
 		.stage-title {
 			font-size: 36px;
 		}
-		
+
 		.formula-card {
 			padding: var(--spacing-lg);
 		}
-		
-		.inputs-grid {
+
+		.cards-grid {
 			gap: var(--spacing-md);
+		}
+
+		.search-box {
+			flex-wrap: wrap;
 		}
 	}
 </style>
