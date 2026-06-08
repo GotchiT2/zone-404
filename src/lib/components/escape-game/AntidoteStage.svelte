@@ -4,8 +4,11 @@
 	import {
 		SEARCHABLE_ITEMS,
 		ANTIDOTE_COMPONENT_COUNT,
+		SCAN_PREFIX,
 		searchItems,
-		findItemByName
+		findItemByName,
+		parseScanCode,
+		findItemById
 	} from '$lib/toto/escape-game-config';
 
 	const dispatch = createEventDispatcher();
@@ -24,6 +27,21 @@
 	let showSuggestions = false;
 	let searchError = '';
 	let searchInput;
+	let highlightedIndex = -1; // suggestion surlignée (navigation clavier)
+	let suggestionEls = []; // refs DOM des suggestions (scroll into view)
+
+	// Feedback de validation directe par scan QR (douchette), sans modale
+	let scanFeedback = null; // { type: 'success' | 'error' | 'info', message }
+	let scanFeedbackTimeout = null;
+	let scanDebounceTimeout = null; // auto-validation quand la saisie scannée se stabilise
+
+	// Pop-up dédiée au scan QR (ouverte au raccourci clavier F2 ou via le bouton)
+	let scanModalOpen = false;
+	let scanModalValue = '';
+	let scanModalInput;
+	let scanModalFeedback = null; // { type, message }
+	let scanModalFeedbackTimeout = null;
+	let scanModalDebounce = null;
 
 	// Modale produit
 	let modalItem = null; // SearchableItem affiché dans la modale
@@ -137,20 +155,158 @@
 
 	function onSearchInput() {
 		searchError = '';
+		highlightedIndex = -1;
+		// Pendant un scan douchette, le texte préfixé ne matche aucun nom :
+		// on n'affiche pas de suggestions (évite tout clignotement du menu).
+		if (parseScanCode(searchQuery) !== null) {
+			suggestions = [];
+			showSuggestions = false;
+			// La douchette tape vite puis s'arrête. Dès que la saisie se stabilise,
+			// on valide automatiquement — sans dépendre d'un suffixe Entrée
+			// (toutes les douchettes n'en envoient pas).
+			if (scanDebounceTimeout) clearTimeout(scanDebounceTimeout);
+			scanDebounceTimeout = setTimeout(() => submitSearch(), 120);
+			return;
+		}
 		suggestions = searchItems(searchQuery);
 		showSuggestions = suggestions.length > 0;
+	}
+
+	function setScanFeedback(type, message) {
+		scanFeedback = { type, message };
+		if (scanFeedbackTimeout) clearTimeout(scanFeedbackTimeout);
+		scanFeedbackTimeout = setTimeout(() => (scanFeedback = null), 4000);
+	}
+
+	// ----- Pop-up dédiée au scan QR -----
+
+	function openScanModal() {
+		if (isComplete) return;
+		modalItem = null; // ferme une éventuelle fiche produit pour éviter l'empilement
+		showSuggestions = false;
+		scanModalOpen = true;
+		scanModalValue = '';
+		scanModalFeedback = null;
+		setTimeout(() => scanModalInput?.focus(), 0);
+	}
+
+	function closeScanModal() {
+		scanModalOpen = false;
+		scanModalValue = '';
+		if (scanModalDebounce) clearTimeout(scanModalDebounce);
+		setTimeout(() => searchInput?.focus(), 0);
+	}
+
+	function setScanModalFeedback(type, message) {
+		scanModalFeedback = { type, message };
+		if (scanModalFeedbackTimeout) clearTimeout(scanModalFeedbackTimeout);
+		scanModalFeedbackTimeout = setTimeout(() => (scanModalFeedback = null), 4000);
+	}
+
+	// Dans la pop-up, toute saisie est un scan : on accepte l'id, le nom,
+	// ou une valeur préfixée VAIK17: (au cas où) — aucun préfixe requis.
+	function findScannedItem(raw) {
+		const code = parseScanCode(raw);
+		const key = code !== null ? code : raw;
+		return findItemById(key) || findItemByName(key);
+	}
+
+	function onScanModalInput() {
+		// La douchette tape vite puis s'arrête : auto-validation à la stabilisation
+		if (scanModalDebounce) clearTimeout(scanModalDebounce);
+		scanModalDebounce = setTimeout(validateScanNow, 150);
+	}
+
+	async function validateScanNow() {
+		if (scanModalDebounce) {
+			clearTimeout(scanModalDebounce);
+			scanModalDebounce = null;
+		}
+
+		const raw = scanModalValue.trim();
+		if (!raw) return;
+
+		const item = findScannedItem(raw);
+		scanModalValue = ''; // prêt pour le scan suivant
+		setTimeout(() => scanModalInput?.focus(), 0);
+
+		if (!item) {
+			setScanModalFeedback('error', `« ${raw} » non reconnu.`);
+			return;
+		}
+
+		const result = await applyAnswer(item);
+		if (result === 'success') {
+			setScanModalFeedback('success', `${item.name} ajouté à la formule !`);
+		} else if (result === 'duplicate') {
+			setScanModalFeedback('info', `${item.name} a déjà été ajouté à la formule.`);
+		} else {
+			setScanModalFeedback('error', `${item.name} ne fait pas partie de la formule de l'antidote.`);
+		}
+
+		if (isComplete) {
+			setTimeout(closeScanModal, 1200);
+		}
+	}
+
+	function handleScanModalKeydown(event) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			event.stopPropagation();
+			validateScanNow();
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			closeScanModal();
+		}
 	}
 
 	function selectSuggestion(item) {
 		searchQuery = item.name;
 		showSuggestions = false;
+		highlightedIndex = -1;
 		openModal(item);
 	}
 
-	function submitSearch() {
-		if (isComplete) return;
+	function scrollHighlightedIntoView() {
+		setTimeout(() => suggestionEls[highlightedIndex]?.scrollIntoView({ block: 'nearest' }), 0);
+	}
 
-		// Correspondance exacte en priorité, sinon meilleure suggestion
+	async function submitSearch() {
+		// Annule l'auto-validation en attente (ex: la touche Entrée a devancé le debounce)
+		if (scanDebounceTimeout) {
+			clearTimeout(scanDebounceTimeout);
+			scanDebounceTimeout = null;
+		}
+
+		if (isComplete) return;
+		if (!searchQuery.trim()) return;
+
+		// Cas scan douchette : validation directe, sans modale
+		const code = parseScanCode(searchQuery);
+		if (code !== null) {
+			const item = findItemById(code);
+			searchQuery = '';
+			showSuggestions = false;
+			searchError = '';
+
+			if (!item) {
+				setScanFeedback('error', 'Code QR non reconnu.');
+				return;
+			}
+
+			const result = await applyAnswer(item);
+			if (result === 'success') {
+				setScanFeedback('success', `${item.name} ajouté à la formule !`);
+			} else if (result === 'duplicate') {
+				setScanFeedback('info', `${item.name} a déjà été ajouté à la formule.`);
+			} else {
+				setScanFeedback('error', `${item.name} ne fait pas partie de la formule de l'antidote.`);
+			}
+			return;
+		}
+
+		// Saisie manuelle : correspondance exacte en priorité, sinon meilleure suggestion
 		const exact = findItemByName(searchQuery);
 		const item = exact || searchItems(searchQuery)[0];
 
@@ -175,11 +331,38 @@
 		setTimeout(() => searchInput?.focus(), 0);
 	}
 
+	/**
+	 * Cœur de validation partagé entre la modale et le scan douchette.
+	 * Renvoie 'error' (leurre), 'duplicate' (déjà trouvé) ou 'success'.
+	 * En cas de succès : remplit un encart, synchronise l'API et vérifie la fin.
+	 */
+	async function applyAnswer(item) {
+		if (!item.isComponent) return 'error';
+		if (foundIds.has(item.id)) return 'duplicate';
+
+		foundIds = new Set(foundIds).add(item.id);
+
+		const emptyIndex = slots.findIndex((s) => s === null);
+		if (emptyIndex !== -1) {
+			slots[emptyIndex] = {
+				id: item.id,
+				name: item.name,
+				image: item.image
+			};
+			slots = slots;
+		}
+
+		await syncTrial(item.trialIndex);
+		checkComplete();
+		return 'success';
+	}
+
 	async function validateModal() {
 		if (!modalItem || isValidating) return;
 
-		// Mauvaise réponse (leurre)
-		if (!modalItem.isComponent) {
+		const item = modalItem;
+
+		if (!item.isComponent) {
 			modalFeedback = {
 				type: 'error',
 				message: "Ce produit ne fait pas partie de la formule de l'antidote."
@@ -187,8 +370,7 @@
 			return;
 		}
 
-		// Déjà trouvé
-		if (foundIds.has(modalItem.id)) {
+		if (foundIds.has(item.id)) {
 			modalFeedback = {
 				type: 'info',
 				message: 'Ce composant a déjà été ajouté à la formule.'
@@ -196,34 +378,19 @@
 			return;
 		}
 
-		// Bonne réponse : remplir un encart
 		isValidating = true;
-		foundIds = new Set(foundIds).add(modalItem.id);
-
-		const emptyIndex = slots.findIndex((s) => s === null);
-		if (emptyIndex !== -1) {
-			slots[emptyIndex] = {
-				id: modalItem.id,
-				name: modalItem.name,
-				image: modalItem.image
-			};
-			slots = slots;
-		}
+		await applyAnswer(item);
 
 		modalFeedback = {
 			type: 'success',
-			message: `${modalItem.name} ajouté à la formule !`
+			message: `${item.name} ajouté à la formule !`
 		};
-
-		// Synchroniser avec l'API
-		await syncTrial(modalItem.trialIndex);
 
 		// Fermer la modale après un court délai et réinitialiser la recherche
 		setTimeout(() => {
 			searchQuery = '';
 			suggestions = [];
 			closeModal();
-			checkComplete();
 		}, 1200);
 	}
 
@@ -259,16 +426,48 @@
 		// Si la modale est ouverte, on laisse la fenêtre gérer Entrée/Échap
 		if (modalItem) return;
 
-		if (event.key === 'Enter') {
+		if (event.key === 'ArrowDown') {
+			if (suggestions.length === 0) return;
+			event.preventDefault();
+			showSuggestions = true;
+			highlightedIndex = (highlightedIndex + 1) % suggestions.length;
+			scrollHighlightedIntoView();
+		} else if (event.key === 'ArrowUp') {
+			if (suggestions.length === 0) return;
+			event.preventDefault();
+			showSuggestions = true;
+			highlightedIndex = highlightedIndex <= 0 ? suggestions.length - 1 : highlightedIndex - 1;
+			scrollHighlightedIntoView();
+		} else if (event.key === 'Enter') {
 			event.preventDefault();
 			event.stopPropagation();
-			submitSearch();
+			// Si une suggestion est surlignée, on l'ouvre ; sinon comportement normal
+			if (showSuggestions && highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+				selectSuggestion(suggestions[highlightedIndex]);
+			} else {
+				submitSearch();
+			}
 		} else if (event.key === 'Escape') {
 			showSuggestions = false;
+			highlightedIndex = -1;
 		}
 	}
 
 	function handleWindowKeydown(event) {
+		// Raccourci d'ouverture de la pop-up de scan
+		if (event.key === 'F2') {
+			event.preventDefault();
+			if (scanModalOpen) {
+				closeScanModal();
+			} else {
+				openScanModal();
+			}
+			return;
+		}
+
+		// Pop-up de scan ouverte : les touches sont gérées par son propre input
+		if (scanModalOpen) return;
+
 		if (!modalItem) return;
 
 		if (event.key === 'Escape') {
@@ -309,6 +508,10 @@
 		if (timerEventSource) timerEventSource.close();
 		if (timerInterval) clearInterval(timerInterval);
 		if (timerReconnectTimeout) clearTimeout(timerReconnectTimeout);
+		if (scanFeedbackTimeout) clearTimeout(scanFeedbackTimeout);
+		if (scanDebounceTimeout) clearTimeout(scanDebounceTimeout);
+		if (scanModalDebounce) clearTimeout(scanModalDebounce);
+		if (scanModalFeedbackTimeout) clearTimeout(scanModalFeedbackTimeout);
 	});
 </script>
 
@@ -372,9 +575,15 @@
 
 					{#if showSuggestions}
 						<ul class="suggestions">
-							{#each suggestions as item (item.id)}
+							{#each suggestions as item, i (item.id)}
 								<li>
-									<button class="suggestion" on:mousedown|preventDefault={() => selectSuggestion(item)}>
+									<button
+										class="suggestion"
+										class:active={i === highlightedIndex}
+										bind:this={suggestionEls[i]}
+										on:mousedown|preventDefault={() => selectSuggestion(item)}
+										on:mouseenter={() => (highlightedIndex = i)}
+									>
 										<span class="suggestion-icon">🔎</span>
 										{item.name}
 									</button>
@@ -383,8 +592,16 @@
 						</ul>
 					{/if}
 				</div>
+				<div class="search-tools">
+					<button class="scan-open-btn" on:click={openScanModal} disabled={isComplete}>
+						📷 Scanner un QR code <kbd>F2</kbd>
+					</button>
+				</div>
 				{#if searchError}
 					<p class="search-error">⚠ {searchError}</p>
+				{/if}
+				{#if scanFeedback}
+					<p class="scan-feedback scan-feedback-{scanFeedback.type}">{scanFeedback.message}</p>
 				{/if}
 			</div>
 
@@ -421,7 +638,8 @@
 						Tapez le nom d'un composant dans la barre de recherche. Après
 						<strong>3 lettres</strong>, des suggestions apparaissent. Sélectionnez-en une
 						ou validez votre saisie pour ouvrir sa fiche, puis confirmez avec
-						<strong>Entrée</strong>.
+						<strong>Entrée</strong>. Pour scanner un QR code, ouvrez le scanner avec
+						<strong>F2</strong> : la validation y est automatique.
 					</p>
 				</div>
 			</div>
@@ -538,6 +756,46 @@
 					disabled={isValidating}
 				>
 					Valider <kbd>Entrée</kbd>
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Pop-up de scan QR (douchette) : validation automatique -->
+{#if scanModalOpen}
+	<div class="modal-overlay" on:click={closeScanModal} role="presentation">
+		<div class="modal scan-modal" on:click|stopPropagation role="dialog" aria-modal="true">
+			<button class="modal-close" on:click={closeScanModal} aria-label="Fermer">✕</button>
+
+			<div class="scan-modal-icon">📷</div>
+			<h3 class="modal-title">Scanner un composant</h3>
+			<p class="modal-description">
+				Scannez le QR code d'un élément avec la douchette. La validation est
+				automatique.
+			</p>
+
+			<input
+				bind:this={scanModalInput}
+				bind:value={scanModalValue}
+				on:input={onScanModalInput}
+				on:keydown={handleScanModalKeydown}
+				class="scan-modal-input"
+				type="text"
+				placeholder="En attente du scan…"
+				autocomplete="off"
+				spellcheck="false"
+			/>
+
+			{#if scanModalFeedback}
+				<div class="modal-feedback modal-feedback-{scanModalFeedback.type}">
+					{scanModalFeedback.message}
+				</div>
+			{/if}
+
+			<div class="modal-actions">
+				<button class="modal-btn modal-btn-secondary" on:click={closeScanModal}>
+					Fermer <kbd>Échap</kbd>
 				</button>
 			</div>
 		</div>
@@ -742,7 +1000,8 @@
 		transition: background 0.15s ease;
 	}
 
-	.suggestion:hover {
+	.suggestion:hover,
+	.suggestion.active {
 		background: var(--cyan-soft);
 		color: var(--accent-cyan);
 	}
@@ -756,6 +1015,106 @@
 		margin: var(--spacing-sm) 0 0 0;
 		font-size: 13px;
 		color: var(--accent-red);
+	}
+
+	/* Feedback de validation par scan QR (douchette) */
+	.scan-feedback {
+		margin: var(--spacing-sm) 0 0 0;
+		padding: var(--spacing-sm) var(--spacing-md);
+		border-radius: var(--radius);
+		font-size: 14px;
+		font-weight: 500;
+		border: 1px solid;
+	}
+
+	.scan-feedback-success {
+		background: var(--green-soft);
+		border-color: rgba(0, 255, 163, 0.3);
+		color: var(--accent-green);
+		animation: successPulse 0.6s ease-out;
+	}
+
+	.scan-feedback-error {
+		background: var(--red-soft);
+		border-color: rgba(255, 77, 77, 0.3);
+		color: var(--accent-red);
+		animation: errorShake 0.4s ease-out;
+	}
+
+	.scan-feedback-info {
+		background: var(--cyan-soft);
+		border-color: rgba(0, 229, 255, 0.3);
+		color: var(--accent-cyan);
+	}
+
+	/* Bouton d'ouverture du scanner */
+	.search-tools {
+		margin-top: var(--spacing-sm);
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.scan-open-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 14px;
+		background: var(--bg-panel);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		color: var(--text-secondary);
+		font-size: 13px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.scan-open-btn:hover:not(:disabled) {
+		border-color: var(--accent-cyan);
+		color: var(--accent-cyan);
+	}
+
+	.scan-open-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.scan-open-btn kbd {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		padding: 2px 5px;
+		border-radius: 3px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+	}
+
+	/* Pop-up de scan */
+	.scan-modal {
+		text-align: center;
+	}
+
+	.scan-modal-icon {
+		font-size: 56px;
+		margin-bottom: var(--spacing-sm);
+	}
+
+	.scan-modal-input {
+		width: 100%;
+		margin: var(--spacing-lg) 0;
+		padding: 14px 16px;
+		background: var(--bg-panel);
+		border: 2px solid var(--accent-cyan);
+		border-radius: var(--radius);
+		color: var(--text-primary);
+		font-family: var(--font-mono);
+		font-size: 16px;
+		text-align: center;
+		outline: none;
+		box-shadow: 0 0 0 3px var(--cyan-soft);
+	}
+
+	.scan-modal-input::placeholder {
+		color: var(--text-muted);
 	}
 
 	/* Formula Card */

@@ -160,7 +160,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 {
 	id: "escherichia-coli-o157h7",
 	name: "Escherichia coli O157:H7",
-	image: "/vaik-17/escherichia-coli-o157h7.png",
+	image: "/vaik-17/escherichia-coli-o157h7.jpg",
 	description: "Souche pathogène d'Escherichia coli responsable d'infections digestives sévères.",
 	isComponent: false,
 },
@@ -168,7 +168,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 {
 	id: "staphylococcus-aureus",
 	name: "Staphylococcus aureus",
-	image: "/vaik-17/staphylococcus-aureus.png",
+	image: "/vaik-17/staphylococcus-aureus.jpg",
 	description: "Bactérie fréquemment impliquée dans les infections cutanées et nosocomiales.",
 	isComponent: false,
 },
@@ -176,7 +176,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 {
 	id: "pseudomonas-aeruginosa",
 	name: "Pseudomonas aeruginosa",
-	image: "/vaik-17/pseudomonas-aeruginosa.png",
+	image: "/vaik-17/pseudomonas-aeruginosa.jpg",
 	description: "Agent opportuniste connu pour sa résistance à de nombreux antibiotiques.",
 	isComponent: false,
 },
@@ -184,7 +184,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 {
 	id: "salmonella-enterica",
 	name: "Salmonella enterica",
-	image: "/vaik-17/salmonella-enterica.png",
+	image: "/vaik-17/salmonella-enterica.jpg",
 	description: "Bactérie responsable de nombreuses infections alimentaires.",
 	isComponent: false,
 },
@@ -498,6 +498,37 @@ export function searchItems(query: string): SearchableItem[] {
 export function findItemByName(name: string): SearchableItem | undefined {
 	const n = normalizeSearch(name);
 	return SEARCHABLE_ITEMS.find(item => normalizeSearch(item.name) === n);
+}
+
+/**
+ * Préfixe technique encodé dans les QR codes (douchette).
+ * Une valeur scannée de la forme `VAIK17:<id>` déclenche la validation
+ * directe (sans modale). Un joueur ne tape jamais ce préfixe à la main.
+ */
+export const SCAN_PREFIX = 'VAIK17:';
+
+/**
+ * Si `value` correspond à un scan, renvoie le code (slug) qui suit le préfixe ;
+ * sinon renvoie null (saisie manuelle).
+ *
+ * Détection tolérante : le mot-clé "VAIK17" est recherché sans tenir compte de
+ * la casse et même s'il est précédé d'un caractère parasite (certaines douchettes
+ * en ajoutent). Le séparateur entre le mot-clé et le slug peut être n'importe
+ * quel caractère non alphanumérique (':', ';', espace…), car les symboles sont
+ * les plus sensibles à la configuration clavier de la douchette.
+ */
+export function parseScanCode(value: string): string | null {
+	// "VAIK17" (insensible à la casse) + séparateur quelconque + slug.
+	const match = value.match(/VAIK17\W*([a-z0-9-]+)/i);
+	return match ? match[1] : null;
+}
+
+/**
+ * Trouve un élément par correspondance exacte (normalisée) de son id (slug).
+ */
+export function findItemById(id: string): SearchableItem | undefined {
+	const n = normalizeSearch(id);
+	return SEARCHABLE_ITEMS.find(item => normalizeSearch(item.id) === n);
 }
 
 /**
