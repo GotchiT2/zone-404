@@ -87,25 +87,8 @@
             </div>
         </div>
 
-        <div id="tresor-cache" class="flex flex-col md:flex-row-reverse w-full justify-center items-center gap-8 md:gap-4 my-16 opacity-80">
+        <div id="studio-404" class="flex flex-col md:flex-row-reverse w-full justify-center items-center gap-8 md:gap-4 my-16 opacity-80">
             <div class="relative">
-                <span class="badge h5 bg-[#EAB72080]  w-full md:w-fit absolute inset-0 md:inset-auto md:-right-10 md:-top-0 z-10 md:rotate-20">À venir...</span>
-                <img alt="" class="drop-shadow-[0_0_10px_#EAB72080]" src="/escape-game-nature-vert.png">
-            </div>
-            <div class="md:w-1/5">
-                <h3 class="h4 mb-8">Le Trésor Caché des 7 Vallées <br/>Escape Game Nature</h3>
-                <Separator color="#EAB72080"/>
-                <p class="my-4">Et si Beaurainville devenait votre terrain d’aventure ? Partez pour un <span class="font-bold">escape game en plein air</span> à travers les rues et les lieux emblématiques du village.
-                    En équipe, explorez, observez, réfléchissez… et récoltez des indices à chaque étape, afin de pouvoir déchiffrer le code final du trésor.
-                </p>
-                <div class="flex gap-4"><span class="badge preset-filled-primary-500">En famille ou entre amis</span></div>
-                <!--            <a class="btn h6 bg-[#EAB72080] hover:bg-[#EAB72080] mt-8" href="/reservation">Réservez une session</a>-->
-            </div>
-        </div>
-
-        <div id="studio-404" class="flex flex-col md:flex-row w-full justify-center items-center gap-8 md:gap-4 my-16 opacity-80">
-            <div class="relative">
-                <span class="badge h5 bg-[#d452e1] w-full md:w-fit absolute inset-0 md:inset-auto md:-right-10 md:-top-0 z-10 md:rotate-20">À venir...</span>
                 <img alt="" class="drop-shadow-[0_0_10px_#d452e1]" src="/salle-quizz.png">
             </div>
             <div class="md:w-1/5">
@@ -118,6 +101,36 @@
                     Comme si vous étiez chez vous.
                     Mais avec le son et l’ambiance en plus.
                 </p>
+
+                <a href="https://www.zone404.fr/reservation" class="btn h6 bg-[#d452e1] hover:bg-[#d452e1] mt-8">Réservez une session</a>
+            </div>
+        </div>
+
+        <div id="tresor-cache" class="flex flex-col md:flex-row w-full justify-center items-center gap-8 md:gap-4 my-16 opacity-80">
+            <div class="relative">
+                <img alt="" class="drop-shadow-[0_0_10px_#EAB72080]" src="/escape-game-nature-vert.png">
+            </div>
+            <div class="md:w-1/5">
+                <h3 class="h4 mb-8">Nos missions extérieures</h3>
+                <Separator color="#EAB72080"/>
+                <p class="my-4">Et si Beaurainville devenait votre terrain d'aventure?
+                    Nous proposons 3 missions plein air à travers les rues de Beaurainville.
+                </p>
+                <p class="my-4"><span
+                        class="font-bold">"Découverte":</span> parcours de 2.4 kms d'environ 1h 1h30 adapté aux familles et enfants<br/>
+<span class="font-bold">"Exploration":</span> parcours de 6.5kms de 2h30 3h.<br/>
+et
+ <span class="font-bold">"Grande Exploration":</span> parcours de 8.5 kms de 3h30 4h.<br/>
+En equipe, en famille, entre amis répondez aux questions, observez pour trouver le code final du coffre.
+                </p>
+                <p>Tous nos parcours sont des boucles au départ de zone 404 avec un retour à zone 404.
+                </p>
+                <p>
+                    Réservation conseillée au 06 72 82 08 92 mais pas obligatoire. Départs possibles pendant les heures d'ouverture, dans la limite des kits disponibles.
+                </p>
+                <p class="font-bold">Veuillez vous munir d'un telephone chargé.</p>
+                <p class="my-4 font-bold">6 euros par personne, gratuit pour les moins de 6 ans.</p>
+                <!--            <a class="btn h6 bg-[#EAB72080] hover:bg-[#EAB72080] mt-8" href="/reservation">Réservez une session</a>-->
             </div>
         </div>
     </div>

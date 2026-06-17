@@ -51,7 +51,7 @@
             id: '8',
             title: 'Quels sont les tarifs pour un escape game ?',
             description:
-                'Pour La classe magique: Le mystère de Souchisse, le tarif est de 15€ par enfant et 5€ par accompagnant (2 accompagnants maximum). Pour L’Encre des Damnés et Projet Vaïk 17 - le Laboratoire de l’Extinction, les tarifs varient selon le nombre de participants (de 20€ à 28€ par personne). Les réservations se font au plus tard deux heures avant le début du créneau.',
+                'Pour La classe magique: Le mystère de Souchisse, le tarif est de 15€ par enfant et 5€ par accompagnant (2 accompagnants maximum). Pour L’Encre des Damnés et Projet Vaïk 17 - le Laboratoire de l’Extinction, les tarifs varient selon le nombre de participants (de 20€ à 28€ par personne). Les réservations se font au plus tard une heure avant le début du créneau.',
         }
     ];
 </script>
