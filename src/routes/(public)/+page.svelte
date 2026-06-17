@@ -144,8 +144,8 @@ En equipe, en famille, entre amis répondez aux questions, observez pour trouver
 
         <p>Choisissez votre créneau dès maintenant <span class="bg-black text-blue-400 font-bold p-2">à partir de deux joueurs !</span>
         </p>
-
-        <p class="btn btn-lg  preset-tonal-surface mt-4">Bientôt réservable !</p>
+        
+        <a href="https://www.zone404.fr/reservation" class="btn btn-lg  preset-tonal-surface mt-4">Réservez une session</a>
     </div>
 </section>
 
