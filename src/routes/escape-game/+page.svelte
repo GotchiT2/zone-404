@@ -8,13 +8,17 @@
 	
 	// État du jeu : 'debug' | 'antidote' | 'success'
 	let currentStage: 'debug' | 'antidote' | 'success' = 'debug';
-	
+
+	// Temps restant dans la partie au moment de la validation finale
+	let remainingTime: string | null = null;
+
 	// Gestion de la progression
 	function handleDebugComplete() {
 		currentStage = 'antidote';
 	}
-	
-	function handleAntidoteComplete() {
+
+	function handleAntidoteComplete(event: CustomEvent<{ remainingTime?: string }>) {
+		remainingTime = event.detail?.remainingTime ?? null;
 		currentStage = 'success';
 	}
 	
@@ -49,7 +53,7 @@
 			{:else if currentStage === 'antidote'}
 				<AntidoteStage token={data.token} on:complete={handleAntidoteComplete} />
 			{:else}
-				<SuccessStage roomName={data.roomName} on:restart={handleRestart} />
+				<SuccessStage roomName={data.roomName} {remainingTime} on:restart={handleRestart} />
 			{/if}
 		</main>
 	</div>

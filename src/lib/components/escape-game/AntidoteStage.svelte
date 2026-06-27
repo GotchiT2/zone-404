@@ -398,7 +398,9 @@
 		const count = slots.filter(Boolean).length;
 		if (count >= SLOT_COUNT && !isComplete) {
 			isComplete = true;
-			setTimeout(() => dispatch('complete'), 2000);
+			// Fige le temps restant affiché à l'instant exact de la dernière validation
+			const remainingTime = roomTime;
+			setTimeout(() => dispatch('complete', { remainingTime }), 2000);
 		}
 	}
 
