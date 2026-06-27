@@ -271,70 +271,287 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 
 // ÉPREUVE 3 - Températures de fusion
 
-{
-	id: "silicium",
-	name: "Silicium",
-	image: "/vaik-17/silicium.png",
-	description: "Métalloïde largement utilisé dans les semi-conducteurs et les technologies modernes.",
-	isComponent: true,
-	trialIndex: 3,
-},
-
-{
-	id: "gallium",
-	name: "Gallium",
-	image: "/vaik-17/gallium.png",
-	description: "Métal capable de fondre à une température proche de celle du corps humain.",
-	isComponent: false,
-},
-
-{
-	id: "indium",
-	name: "Indium",
-	image: "/vaik-17/indium.png",
-	description: "Métal utilisé dans certains écrans et composants électroniques.",
-	isComponent: false,
-},
-
-{
-	id: "zinc",
-	name: "Zinc",
-	image: "/vaik-17/zinc.png",
-	description: "Métal utilisé notamment pour protéger l'acier contre la corrosion.",
-	isComponent: false,
-},
-
-{
-	id: "aluminium",
-	name: "Aluminium",
-	image: "/vaik-17/aluminium.png",
-	description: "Métal léger largement utilisé dans l'industrie et les transports.",
-	isComponent: false,
-},
-
-{
-	id: "argent",
-	name: "Argent",
-	image: "/vaik-17/argent.png",
-	description: "Métal précieux connu pour son excellente conductivité électrique.",
-	isComponent: false,
-},
-
-{
-	id: "or",
-	name: "Or",
-	image: "/vaik-17/or.png",
-	description: "Métal précieux apprécié pour sa stabilité chimique.",
-	isComponent: false,
-},
-
-{
-	id: "cuivre",
-	name: "Cuivre",
-	image: "/vaik-17/cuivre.png",
-	description: "Métal rougeâtre très utilisé dans les câblages électriques.",
-	isComponent: false,
-},
+  {
+    "id": "eau-distillee",
+    "name": "Eau distillée",
+    "image": "/images/glossary/eau-distillee.jpg",
+    "description": "Liquide purifié obtenu par distillation.",
+    "isComponent": false
+  },
+  {
+    "id": "eau-demineralisee",
+    "name": "Eau déminéralisée",
+    "image": "/images/glossary/eau-demineralisee.jpg",
+    "description": "Eau dont les sels minéraux ont été retirés.",
+    "isComponent": false
+  },
+  {
+    "id": "solution-saline",
+    "name": "Solution saline",
+    "image": "/images/glossary/solution-saline.jpg",
+    "description": "Solution aqueuse de chlorure de sodium.",
+    "isComponent": false
+  },
+  {
+    "id": "ethanol",
+    "name": "Éthanol",
+    "image": "/images/glossary/ethanol.jpg",
+    "description": "Alcool couramment utilisé comme solvant.",
+    "isComponent": false
+  },
+  {
+    "id": "methanol",
+    "name": "Méthanol",
+    "image": "/images/glossary/methanol.jpg",
+    "description": "Alcool simple utilisé en laboratoire.",
+    "isComponent": false
+  },
+  {
+    "id": "propanol",
+    "name": "Propanol",
+    "image": "/images/glossary/propanol.jpg",
+    "description": "Alcool employé comme désinfectant et solvant.",
+    "isComponent": false
+  },
+  {
+    "id": "isopropanol",
+    "name": "Isopropanol",
+    "image": "/images/glossary/isopropanol.jpg",
+    "description": "Alcool utilisé pour le nettoyage de précision.",
+    "isComponent": false
+  },
+  {
+    "id": "acetone",
+    "name": "Acétone",
+    "image": "/images/glossary/acetone.jpg",
+    "description": "Solvant organique volatil.",
+    "isComponent": false
+  },
+  {
+    "id": "glycerol",
+    "name": "Glycérol",
+    "image": "/images/glossary/glycerol.jpg",
+    "description": "Liquide visqueux utilisé en pharmacie.",
+    "isComponent": false
+  },
+  {
+    "id": "propylene-glycol",
+    "name": "Propylène glycol",
+    "image": "/images/glossary/propylene-glycol.jpg",
+    "description": "Solvant utilisé dans les préparations pharmaceutiques.",
+    "isComponent": false
+  },
+  {
+    "id": "ethylene-glycol",
+    "name": "Éthylène glycol",
+    "image": "/images/glossary/ethylene-glycol.jpg",
+    "description": "Diol utilisé dans les liquides de refroidissement.",
+    "isComponent": false
+  },
+  {
+    "id": "huile-minerale",
+    "name": "Huile minérale",
+    "image": "/images/glossary/huile-minerale.jpg",
+    "description": "Huile transparente d'origine minérale.",
+    "isComponent": false
+  },
+  {
+    "id": "huile-silicone",
+    "name": "Huile silicone",
+    "image": "/images/glossary/huile-silicone.jpg",
+    "description": "Liquide silicone incolore.",
+    "isComponent": false
+  },
+  {
+    "id": "paraffine-liquide",
+    "name": "Paraffine liquide",
+    "image": "/images/glossary/paraffine-liquide.jpg",
+    "description": "Huile minérale très purifiée.",
+    "isComponent": false
+  },
+  {
+    "id": "hexane",
+    "name": "Hexane",
+    "image": "/images/glossary/hexane.jpg",
+    "description": "Solvant organique aliphatique.",
+    "isComponent": false
+  },
+  {
+    "id": "heptane",
+    "name": "Heptane",
+    "image": "/images/glossary/heptane.jpg",
+    "description": "Hydrocarbure liquide transparent.",
+    "isComponent": false
+  },
+  {
+    "id": "cyclohexane",
+    "name": "Cyclohexane",
+    "image": "/images/glossary/cyclohexane.jpg",
+    "description": "Solvant cyclique utilisé en chimie.",
+    "isComponent": false
+  },
+  {
+    "id": "toluene",
+    "name": "Toluène",
+    "image": "/images/glossary/toluene.jpg",
+    "description": "Solvant aromatique incolore.",
+    "isComponent": false
+  },
+  {
+    "id": "xylene",
+    "name": "Xylène",
+    "image": "/images/glossary/xylene.jpg",
+    "description": "Famille de solvants aromatiques.",
+    "isComponent": false
+  },
+  {
+    "id": "ether-ethylique",
+    "name": "Éther éthylique",
+    "image": "/images/glossary/ether-ethylique.jpg",
+    "description": "Solvant organique très volatil.",
+    "isComponent": false
+  },
+  {
+    "id": "acetonitrile",
+    "name": "Acétonitrile",
+    "image": "/images/glossary/acetonitrile.jpg",
+    "description": "Solvant utilisé en chromatographie.",
+    "isComponent": false
+  },
+  {
+    "id": "dimethyl-sulfoxyde",
+    "name": "Diméthylsulfoxyde",
+    "image": "/images/glossary/dimethyl-sulfoxyde.jpg",
+    "description": "Solvant polaire aprotique.",
+    "isComponent": false
+  },
+  {
+    "id": "formamide",
+    "name": "Formamide",
+    "image": "/images/glossary/formamide.jpg",
+    "description": "Liquide polaire utilisé en biologie moléculaire.",
+    "isComponent": false
+  },
+  {
+    "id": "dimethylformamide",
+    "name": "Diméthylformamide",
+    "image": "/images/glossary/dimethylformamide.jpg",
+    "description": "Solvant organique de synthèse.",
+    "isComponent": false
+  },
+  {
+    "id": "acide-acetique",
+    "name": "Acide acétique",
+    "image": "/images/glossary/acide-acetique.jpg",
+    "description": "Acide organique incolore.",
+    "isComponent": false
+  },
+  {
+    "id": "acide-formique",
+    "name": "Acide formique",
+    "image": "/images/glossary/acide-formique.jpg",
+    "description": "Acide organique naturellement présent chez certains insectes.",
+    "isComponent": false
+  },
+  {
+    "id": "acide-lactique",
+    "name": "Acide lactique",
+    "image": "/images/glossary/acide-lactique.jpg",
+    "description": "Acide organique produit lors de la fermentation.",
+    "isComponent": false
+  },
+  {
+    "id": "ammoniaque",
+    "name": "Solution d'ammoniaque",
+    "image": "/images/glossary/ammoniaque.jpg",
+    "description": "Solution aqueuse d'ammoniac.",
+    "isComponent": false
+  },
+  {
+    "id": "peroxyde-hydrogene",
+    "name": "Peroxyde d'hydrogène",
+    "image": "/images/glossary/peroxyde-hydrogene.jpg",
+    "description": "Solution oxydante incolore.",
+    "isComponent": false
+  },
+  {
+    "id": "eau-oxygenee",
+    "name": "Eau oxygénée",
+    "image": "/images/glossary/eau-oxygenee.jpg",
+    "description": "Nom courant du peroxyde d'hydrogène dilué.",
+    "isComponent": false
+  },
+  {
+    "id": "chloroforme",
+    "name": "Chloroforme",
+    "image": "/images/glossary/chloroforme.jpg",
+    "description": "Liquide organique dense et transparent.",
+    "isComponent": false
+  },
+  {
+    "id": "dichloromethane",
+    "name": "Dichlorométhane",
+    "image": "/images/glossary/dichloromethane.jpg",
+    "description": "Solvant chloré couramment utilisé.",
+    "isComponent": false
+  },
+  {
+    "id": "tetrahydrofurane",
+    "name": "Tétrahydrofurane",
+    "image": "/images/glossary/tetrahydrofurane.jpg",
+    "description": "Solvant organique cyclique.",
+    "isComponent": false
+  },
+  {
+    "id": "dioxane",
+    "name": "Dioxane",
+    "image": "/images/glossary/dioxane.jpg",
+    "description": "Éther cyclique utilisé en synthèse.",
+    "isComponent": false
+  },
+  {
+    "id": "solution-tampon-phosphate",
+    "name": "Solution tampon phosphate",
+    "image": "/images/glossary/solution-tampon-phosphate.jpg",
+    "description": "Solution utilisée en laboratoire de biologie.",
+    "isComponent": false
+  },
+  {
+    "id": "solution-tampon-tris",
+    "name": "Solution tampon Tris",
+    "image": "/images/glossary/solution-tampon-tris.jpg",
+    "description": "Tampon couramment utilisé en biochimie.",
+    "isComponent": false
+  },
+  {
+    "id": "solution-glucose",
+    "name": "Solution de glucose",
+    "image": "/images/glossary/solution-glucose.jpg",
+    "description": "Solution aqueuse de glucose.",
+    "isComponent": false
+  },
+  {
+    "id": "solution-saccharose",
+    "name": "Solution de saccharose",
+    "image": "/images/glossary/solution-saccharose.jpg",
+    "description": "Solution aqueuse de sucre.",
+    "isComponent": false
+  },
+  {
+    "id": "serum-physiologique",
+    "name": "Sérum physiologique",
+    "image": "/images/glossary/serum-physiologique.jpg",
+    "description": "Solution saline isotonique stérile.",
+    "isComponent": false
+  },
+  {
+    "id": "azureline",
+    "name": "Azuréline",
+    "image": "/images/glossary/azureline.jpg",
+    "description": "Solution bleu profond mise au point en laboratoire et utilisée dans la formulation de l'antidote expérimental.",
+    "isComponent": true,
+    "trialIndex": 6
+  },
 
 // ÉPREUVE 4 - Roche mutagène
 
