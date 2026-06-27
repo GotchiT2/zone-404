@@ -3,7 +3,6 @@
  */
 
 import type { FileNode, ModulesConfig } from './terminal-filesystem';
-import { parseModulesConfig, stringifyModulesConfig } from './terminal-filesystem';
 
 export interface CommandContext {
 	currentPath: string[];
@@ -39,8 +38,6 @@ export function executeCommand(
 			return commandHelp();
 		case 'clear':
 			return { output: '', type: 'info' };
-		case 'cd':
-			return commandCd(args, context);
 		case 'cat':
 			return commandCat(args, context);
 		case 'edit':
@@ -63,16 +60,6 @@ function commandHelp(): CommandResult {
 ║          TERMINAL DE SECOURS - COMMANDES DISPONIBLES          ║
 ╚════════════════════════════════════════════════════════════════╝
 
-NAVIGATION
-  cd <nom-dossier>
-    Entre dans un sous-dossier.
-    L'arborescence à droite indique en permanence votre position.
-    Exemple : cd config
-
-  cd ..
-    Remonte d'un niveau dans l'arborescence.
-    Permet de revenir au dossier parent.
-
 CONSULTATION
   cat <nom-fichier>
     Affiche le contenu complet d'un fichier texte.
@@ -80,10 +67,10 @@ CONSULTATION
     Exemple : cat LISEZ_MOI.txt
 
 MODIFICATION
-  edit <chemin-fichier>
+  edit <nom-fichier>
     Ouvre un fichier en mode édition si modification autorisée.
     Seuls certains fichiers de configuration peuvent être modifiés.
-    Exemple : edit config/modules.json
+    Exemple : edit modules.json
 
 COMPILATION & EXÉCUTION
   build
@@ -103,47 +90,6 @@ COMPILATION & EXÉCUTION
 ╚════════════════════════════════════════════════════════════════╝
 `;
 	return { output: help, type: 'info' };
-}
-
-function commandCd(args: string[], context: CommandContext): CommandResult {
-	if (args.length === 0) {
-		return { output: 'Usage : cd <nom-dossier> ou cd ..', type: 'error' };
-	}
-
-	const target = args[0];
-
-	if (target === '..') {
-		if (context.currentPath.length === 0) {
-			return { output: 'Déjà à la racine', type: 'error' };
-		}
-		return {
-			output: '',
-			type: 'success',
-			newPath: context.currentPath.slice(0, -1)
-		};
-	}
-
-	const node = getNodeAtPath(context.currentPath, context.filesystem);
-	if (!node || node.type !== 'directory') {
-		return { output: 'Erreur : répertoire courant invalide', type: 'error' };
-	}
-
-	const children = node.children || {};
-	const child = children[target];
-
-	if (!child) {
-		return { output: `Dossier introuvable : ${target}`, type: 'error' };
-	}
-
-	if (child.type !== 'directory') {
-		return { output: `"${target}" n'est pas un dossier`, type: 'error' };
-	}
-
-	return {
-		output: '',
-		type: 'success',
-		newPath: [...context.currentPath, target]
-	};
 }
 
 function commandCat(args: string[], context: CommandContext): CommandResult {
@@ -180,15 +126,15 @@ function commandEdit(args: string[], context: CommandContext): CommandResult {
 	const filepath = args[0];
 
 	// Seul modules.json est éditable
-	if (filepath !== 'config/modules.json' && filepath !== 'modules.json') {
+	if (filepath !== 'modules.json') {
 		return {
-			output: `Le fichier "${filepath}" n'est pas modifiable.\nSeul config/modules.json peut être édité.`,
+			output: `Le fichier "${filepath}" n'est pas modifiable.\nSeul modules.json peut être édité.`,
 			type: 'error'
 		};
 	}
 
 	// Récupérer le contenu
-	const configNode = context.filesystem.config?.children?.['modules.json'];
+	const configNode = context.filesystem['modules.json'];
 	if (!configNode || configNode.type !== 'file') {
 		return { output: 'Erreur : fichier de configuration introuvable', type: 'error' };
 	}
@@ -197,7 +143,7 @@ function commandEdit(args: string[], context: CommandContext): CommandResult {
 		output: '',
 		type: 'info',
 		startEdit: {
-			file: 'config/modules.json',
+			file: 'modules.json',
 			content: configNode.content || ''
 		}
 	};
@@ -207,7 +153,7 @@ function commandBuild(context: CommandContext): CommandResult {
 	const output = `
 Compilation du système de synthèse...
 
-Lecture de la configuration : config/modules.json
+Lecture de la configuration : modules.json
 Vérification des modules requis...
   ✓ Module uiRenderer : ACTIF
   ✓ Module dataRegistry : ACTIF
@@ -224,7 +170,7 @@ Le module 'synthesisEngine' n'est pas activé.
 Ce module est ESSENTIEL pour le système de synthèse.
 
 ACTION REQUISE :
-Activez le module dans config/modules.json puis relancez la compilation.
+Activez le module dans modules.json puis relancez la compilation.
 `,
 			type: 'error',
 			buildSuccess: false
@@ -315,7 +261,7 @@ export function autocomplete(
 
 	// Si on n'a qu'un mot, compléter la commande
 	if (parts.length === 1) {
-		const commands = ['help', 'clear', 'cd', 'cat', 'edit', 'build', 'start'];
+		const commands = ['help', 'clear', 'cat', 'edit', 'build', 'start'];
 		const matches = commands.filter(c => c.startsWith(cmd));
 		
 		if (matches.length === 1) {

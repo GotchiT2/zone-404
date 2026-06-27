@@ -20,7 +20,7 @@
 	// État du système
 	let currentPath = [];
 	let filesystem = createFilesystem();
-	let modulesConfig = parseModulesConfig(filesystem.config.children['modules.json'].content);
+	let modulesConfig = parseModulesConfig(filesystem['modules.json'].content);
 	let buildSucceeded = false;
 	let appStarted = false;
 	
@@ -119,7 +119,7 @@ Tapez 'cat LISEZ_MOI.txt' pour lire les instructions.
 		if (result.updatedConfig) {
 			modulesConfig = result.updatedConfig;
 			// Mettre à jour le filesystem
-			filesystem.config.children['modules.json'].content = stringifyModulesConfig(modulesConfig);
+			filesystem['modules.json'].content = stringifyModulesConfig(modulesConfig);
 		}
 		
 		if (result.buildSuccess !== undefined) {
@@ -225,11 +225,11 @@ Tapez 'cat LISEZ_MOI.txt' pour lire les instructions.
 		
 		// Mettre à jour la config
 		modulesConfig = editConfig;
-		filesystem.config.children['modules.json'].content = stringifyModulesConfig(modulesConfig);
-		
+		filesystem['modules.json'].content = stringifyModulesConfig(modulesConfig);
+
 		addToHistory({
 			type: 'success',
-			content: `Fichier config/modules.json sauvegardé avec succès.
+			content: `Fichier modules.json sauvegardé avec succès.
 Module synthesisEngine : ${modulesConfig.modules.synthesisEngine ? 'ACTIVÉ' : 'DÉSACTIVÉ'}`
 		});
 		

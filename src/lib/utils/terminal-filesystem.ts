@@ -68,22 +68,18 @@ Bon courage.
 }
 `
 		},
-		src: {
-			type: 'directory',
-			name: 'src',
-			children: {
-				'app.js': {
-					type: 'file',
-					name: 'app.js',
-					content: `/**
+		'app.js': {
+			type: 'file',
+			name: 'app.js',
+			content: `/**
  * Application principale - Système de synthèse d'antidote
  */
 
-const config = require('../config/modules.json');
+const config = require('./modules.json');
 
 function initializeSynthesisSystem() {
   console.log('Initialisation du système de synthèse...');
-  
+
   // Vérification de la disponibilité du moteur de synthèse
   if (!config.modules.synthesisEngine) {
     throw new Error(
@@ -91,11 +87,11 @@ function initializeSynthesisSystem() {
       'Impossible de démarrer l\'application de synthèse.'
     );
   }
-  
+
   console.log('✓ Moteur de synthèse : ACTIF');
   console.log('✓ Registre de données : ACTIF');
   console.log('✓ Interface utilisateur : ACTIF');
-  
+
   return {
     status: 'ready',
     modules: config.modules
@@ -104,56 +100,42 @@ function initializeSynthesisSystem() {
 
 module.exports = { initializeSynthesisSystem };
 `
-				}
-			}
 		},
-		config: {
-			type: 'directory',
-			name: 'config',
-			children: {
-				'modules.json': {
-					type: 'file',
-					name: 'modules.json',
-					content: JSON.stringify(
-						{
-							modules: {
-								synthesisEngine: false,
-								uiRenderer: true,
-								dataRegistry: true
-							}
-						},
-						null,
-						2
-					)
-				}
-			}
+		'modules.json': {
+			type: 'file',
+			name: 'modules.json',
+			content: JSON.stringify(
+				{
+					modules: {
+						synthesisEngine: false,
+						uiRenderer: true,
+						dataRegistry: true
+					}
+				},
+				null,
+				2
+			)
 		},
-		historique: {
-			type: 'directory',
-			name: 'historique',
-			children: {
-				'activite.log': {
-					type: 'file',
-					name: 'activite.log',
-					content: `[2026-04-10 18:42:17] Démarrage de la compilation...
-[2026-04-10 18:42:18] Lecture de la configuration : config/modules.json
+		'activite.log': {
+			type: 'file',
+			name: 'activite.log',
+			content: `[2026-04-10 18:42:17] Démarrage de la compilation...
+[2026-04-10 18:42:18] Lecture de la configuration : modules.json
 [2026-04-10 18:42:18] Vérification des modules requis...
 [2026-04-10 18:42:19] ✓ Module uiRenderer : ACTIF
 [2026-04-10 18:42:19] ✓ Module dataRegistry : ACTIF
 [2026-04-10 18:42:19] ✗ Module synthesisEngine : INACTIF
-[2026-04-10 18:42:19] 
+[2026-04-10 18:42:19]
 [2026-04-10 18:42:19] ERREUR DE COMPILATION
 [2026-04-10 18:42:19] Le module 'synthesisEngine' n'est pas activé dans la configuration.
 [2026-04-10 18:42:19] Ce module est ESSENTIEL pour le système de synthèse d'antidote.
-[2026-04-10 18:42:19] 
+[2026-04-10 18:42:19]
 [2026-04-10 18:42:19] ACTION REQUISE:
-[2026-04-10 18:42:19] Activez le module 'synthesisEngine' dans config/modules.json
+[2026-04-10 18:42:19] Activez le module 'synthesisEngine' dans modules.json
 [2026-04-10 18:42:19] puis relancez la compilation avec 'build'
-[2026-04-10 18:42:19] 
+[2026-04-10 18:42:19]
 [2026-04-10 18:42:19] Compilation ÉCHOUÉE
 `
-				}
-			}
 		}
 	};
 }
