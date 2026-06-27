@@ -14,7 +14,7 @@ export const GAME_STAGES: GameStage[] = [
 	{
 		id: 'antidote',
 		name: 'Synthèse de l\'antidote',
-		trialIndex: 2, // Note: on utilise 2-11 pour les sous-composants
+		trialIndex: 2, // Note: les sous-composants occupent les épreuves 2 à 7
 		description: 'Reconstitution de la formule de l\'antidote'
 	}
 ];
@@ -29,7 +29,8 @@ export const GAME_STAGES: GameStage[] = [
  * montre la photo (`image`) et la `description` du produit.
  *
  * - isComponent: true  => bonne réponse (remplit un encart de la formule)
- *   -> doit avoir un `trialIndex` unique (2 à 11) pour la synchro API.
+ *   -> doit avoir un `trialIndex` unique et existant en base (2 à 7 pour la
+ *      salle-3 : l'épreuve 1 est réservée à la phase Debug/Terminal).
  * - isComponent: false => leurre (mauvaise réponse, message d'erreur).
  *
  * POUR COMPLÉTER (mots / photos / descriptions fournis ultérieurement) :
@@ -40,7 +41,7 @@ export const GAME_STAGES: GameStage[] = [
  * ============================================================================
  */
 export const SEARCHABLE_ITEMS: SearchableItem[] = [
-	// ÉPREUVE 0 - Hydrolyse du triglycéride -> Glycérol
+	// ÉPREUVE 2 - Hydrolyse du triglycéride -> Glycérol
 
 	{
 		id: "glycerol",
@@ -48,7 +49,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 		image: "/vaik-17/glycerol.png",
 		description: "Triol issu de l'hydrolyse des triglycérides.",
 		isComponent: true,
-		trialIndex: 0,
+		trialIndex: 2,
 	},
 	{
 		id: "ethanol",
@@ -72,7 +73,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 		isComponent: false,
 	},
 
-	// ÉPREUVE 1 - Identification de l'antidote parmi les toxiques
+	// ÉPREUVE 3 - Identification de l'antidote parmi les toxiques
 
 	{
 		id: "pralidoxime",
@@ -80,7 +81,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 		image: "/vaik-17/pralidoxime.png",
 		description: "Réactivateur de l'acétylcholinestérase utilisé comme antidote de certains organophosphorés.",
 		isComponent: true,
-		trialIndex: 1,
+		trialIndex: 3,
 	},
 	{
 		id: "digoxine",
@@ -146,7 +147,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 		isComponent: false,
 	},
 
-	// ÉPREUVE 2 - Identification de la bonne culture bactérienne
+	// ÉPREUVE 4 - Identification de la bonne culture bactérienne
 
 {
 	id: "lactobacillus-rhamnosus",
@@ -154,7 +155,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 	image: "/vaik-17/lactobacillus-rhamnosus.png",
 	description: "Bactérie lactique utilisée en probiothérapie et étudiée pour ses effets bénéfiques sur l'organisme.",
 	isComponent: true,
-	trialIndex: 2,
+	trialIndex: 4,
 },
 
 {
@@ -269,7 +270,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 	isComponent: false,
 },
 
-// ÉPREUVE 3 - Températures de fusion
+// ÉPREUVE 5 - Températures de fusion
 
   {
     "id": "eau-distillee",
@@ -550,10 +551,10 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
     "image": "/images/glossary/azureline.jpg",
     "description": "Solution bleu profond mise au point en laboratoire et utilisée dans la formulation de l'antidote expérimental.",
     "isComponent": true,
-    "trialIndex": 6
+    "trialIndex": 5
   },
 
-// ÉPREUVE 4 - Roche mutagène
+// ÉPREUVE 6 - Roche mutagène
 
 {
 	id: "kheronite",
@@ -561,7 +562,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 	image: "/vaik-17/kheronite.png",
 	description: "Minéral rare étudié pour ses interactions uniques avec certains mécanismes cellulaires avancés.",
 	isComponent: true,
-	trialIndex: 4,
+	trialIndex: 6,
 },
 
 {
@@ -612,7 +613,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 	isComponent: false,
 },
 
-// ÉPREUVE 5 - Signal audio / microscope
+// ÉPREUVE 7 - Signal audio / microscope
 
 {
 	id: "velorine",
@@ -620,7 +621,7 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 	image: "/vaik-17/velorine.png",
 	description: "Protéine isolée à partir du venin des serpents Véloriens et étudiée pour ses propriétés d'adhésion cellulaire.",
 	isComponent: true,
-	trialIndex: 5,
+	trialIndex: 7,
 },
 
 {
