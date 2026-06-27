@@ -1,11 +1,17 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 	import DebugStage from '$lib/components/escape-game/DebugStage.svelte';
 	import AntidoteStage from '$lib/components/escape-game/AntidoteStage.svelte';
 	import SuccessStage from '$lib/components/escape-game/SuccessStage.svelte';
+	import LoadingStage from '$lib/components/escape-game/LoadingStage.svelte';
 	import { SEARCHABLE_ITEMS, GAME_STAGES } from '$lib/toto/escape-game-config';
 
 	export let data: PageData;
+
+	// Salle suivie pour le lancement de la partie (cohérent avec AntidoteStage)
+	const TIMER_ROOM_ID = 'salle-3';
 
 	// Index des épreuves correspondant à chaque stade (source : config du jeu)
 	const DEBUG_TRIAL = GAME_STAGES.find((s) => s.id === 'debug')?.trialIndex ?? 1;
@@ -40,6 +46,54 @@
 		remainingTime = event.detail?.remainingTime ?? null;
 		currentStage = 'success';
 	}
+
+	// --- Écran de chargement tant que le GM n'a pas lancé la partie ---
+	// La partie est lancée dès que le timer quitte l'état IDLE (événement SSE).
+	let gameStarted: boolean = data.gameStarted ?? false;
+	let startEventSource: EventSource | null = null;
+	let startReconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	function teardownStartWatcher() {
+		if (startEventSource) {
+			startEventSource.close();
+			startEventSource = null;
+		}
+		if (startReconnectTimeout) {
+			clearTimeout(startReconnectTimeout);
+			startReconnectTimeout = null;
+		}
+	}
+
+	function watchGameStart() {
+		if (!browser || gameStarted) return;
+		if (startEventSource) startEventSource.close();
+
+		startEventSource = new EventSource(`/api/rooms/${TIMER_ROOM_ID}/events`);
+
+		startEventSource.addEventListener('timer_state', (e) => {
+			try {
+				const state = JSON.parse((e as MessageEvent).data);
+				if (state.status && state.status !== 'IDLE') {
+					gameStarted = true;
+					teardownStartWatcher();
+				}
+			} catch (err) {
+				console.error('Timer state parse error:', err);
+			}
+		});
+
+		startEventSource.onerror = () => {
+			// Reconnexion (ex: run/timer pas encore créé côté GM)
+			startEventSource?.close();
+			startEventSource = null;
+			startReconnectTimeout = setTimeout(() => {
+				if (browser && !gameStarted) watchGameStart();
+			}, 5000);
+		};
+	}
+
+	onMount(watchGameStart);
+	onDestroy(teardownStartWatcher);
 </script>
 
 <svelte:head>
@@ -53,7 +107,9 @@
 <div class="lab-container">
 	<div class="lab-content">
 		<main class="game-area">
-			{#if currentStage === 'debug'}
+			{#if !gameStarted}
+				<LoadingStage />
+			{:else if currentStage === 'debug'}
 				<DebugStage token={data.token} on:complete={handleDebugComplete} />
 			{:else if currentStage === 'antidote'}
 				<AntidoteStage

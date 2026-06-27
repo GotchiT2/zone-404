@@ -39,13 +39,21 @@ export const load: PageServerLoad = async ({ url }) => {
 	// la base : les épreuves validées sont stockées par run.
 	let validatedTrials: number[] = [];
 	let remainingTime: string | null = null;
+	// Tant que le GM n'a pas démarré le timer (état IDLE ou aucun timer), on
+	// considère la partie comme non lancée -> la page affiche un écran de chargement.
+	let gameStarted = false;
 
 	const tokenData = await validateGameToken(token);
 	if (tokenData) {
-		const statuses = await prisma.runTrialStatus.findMany({
-			where: { runId: tokenData.runId, validated: true },
-			include: { trial: true }
-		});
+		const [statuses, timer] = await Promise.all([
+			prisma.runTrialStatus.findMany({
+				where: { runId: tokenData.runId, validated: true },
+				include: { trial: true }
+			}),
+			prisma.runTimer.findUnique({ where: { runId: tokenData.runId } })
+		]);
+
+		gameStarted = !!timer && timer.state !== 'IDLE';
 		validatedTrials = statuses.map((s) => s.trial.index);
 
 		// Si tous les composants de l'antidote sont validés, reconstituer le temps
@@ -56,7 +64,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		const antidoteDone =
 			antidoteTrials.length > 0 && antidoteTrials.every((t) => validatedTrials.includes(t));
 
-		if (antidoteDone) {
+		if (antidoteDone && timer) {
 			const lastValidatedAt = statuses
 				.filter((s) => antidoteTrials.includes(s.trial.index) && s.validatedAt)
 				.reduce<Date | null>(
@@ -64,8 +72,7 @@ export const load: PageServerLoad = async ({ url }) => {
 					null
 				);
 
-			const timer = await prisma.runTimer.findUnique({ where: { runId: tokenData.runId } });
-			if (timer && lastValidatedAt) {
+			if (lastValidatedAt) {
 				remainingTime = formatTime(calculateRemainingMsAt(timer, lastValidatedAt.getTime()));
 			}
 		}
@@ -77,6 +84,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		isValid: true,
 		roomName: 'Laboratoire Omega', // Nom par défaut pour l'affichage
 		validatedTrials,
-		remainingTime
+		remainingTime,
+		gameStarted
 	};
 };
