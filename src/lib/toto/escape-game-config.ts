@@ -616,77 +616,77 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 // ÉPREUVE 7 - Signal audio / microscope
 
 	{
-		id: "trictenase",
-		name: "Tricténase",
-		image: "/vaik-17/trictenase.png",
-		description: "Protéine isolée à partir de Tricténotoma et étudiée pour favoriser l'adhésion et la régénération des tissus cellulaires.",
-		isComponent: true,
-		trialIndex: 7,
-	},
+	id: "velaxine",
+	name: "Velaxine",
+	image: "/vaik-17/velaxine.png",
+	description: "Protéine favorisant l'adhésion des cellules saines aux tissus lésés.",
+	isComponent: true,
+	trialIndex: 7,
+},
 
-	{
-		id: "scorpidine",
-		name: "Scorpidine",
-		image: "/vaik-17/scorpidine.png",
-		description: "Peptide expérimental extrait du venin de scorpions noirs géants.",
-		isComponent: false,
-	},
+{
+	id: "cyrenol",
+	name: "Cyrenol",
+	image: "/vaik-17/cyrenol.png",
+	description: "Peptide expérimental étudié pour ses interactions avec les membranes cellulaires.",
+	isComponent: false,
+},
 
-	{
-		id: "phasmine",
-		name: "Phasmine",
-		image: "/vaik-17/phasmine.png",
-		description: "Protéine structurelle identifiée chez plusieurs espèces de phasmes.",
-		isComponent: false,
-	},
+{
+	id: "novarine",
+	name: "Novarine",
+	image: "/vaik-17/novarine.png",
+	description: "Protéine présente dans plusieurs sécrétions animales d'origine inconnue.",
+	isComponent: false,
+},
 
-	{
-		id: "curculine",
-		name: "Curculine",
-		image: "/vaik-17/curculine.png",
-		description: "Molécule biologique étudiée chez différents charançons.",
-		isComponent: false,
-	},
+{
+	id: "thalexine",
+	name: "Thalexine",
+	image: "/vaik-17/thalexine.png",
+	description: "Molécule biologique impliquée dans différents mécanismes enzymatiques.",
+	isComponent: false,
+},
 
-	{
-		id: "lucanine",
-		name: "Lucanine",
-		image: "/vaik-17/lucanine.png",
-		description: "Protéine présente dans l'hémolymphe de certains lucanes asiatiques.",
-		isComponent: false,
-	},
+{
+	id: "orphyline",
+	name: "Orphyline",
+	image: "/vaik-17/orphyline.png",
+	description: "Protéine étudiée pour ses propriétés de stabilisation moléculaire.",
+	isComponent: false,
+},
 
-	{
-		id: "decticine",
-		name: "Decticine",
-		image: "/vaik-17/decticine.png",
-		description: "Peptide isolé chez plusieurs espèces d'orthoptères.",
-		isComponent: false,
-	},
+{
+	id: "kerycine",
+	name: "Kerycine",
+	image: "/vaik-17/kerycine.png",
+	description: "Peptide expérimental observé dans plusieurs espèces invertébrées.",
+	isComponent: false,
+},
 
-	{
-		id: "scarabine",
-		name: "Scarabine",
-		image: "/vaik-17/scarabine.png",
-		description: "Molécule organique observée dans la cuticule de grands scarabées.",
-		isComponent: false,
-	},
+{
+	id: "lysorine",
+	name: "Lysorine",
+	image: "/vaik-17/lysorine.png",
+	description: "Molécule organique participant à certains processus de réparation cellulaire in vitro.",
+	isComponent: false,
+},
 
-	{
-		id: "myriadine",
-		name: "Myriadine",
-		image: "/vaik-17/myriadine.png",
-		description: "Substance expérimentale identifiée chez plusieurs espèces de mille-pattes.",
-		isComponent: false,
-	},
+{
+	id: "feranine",
+	name: "Feranine",
+	image: "/vaik-17/feranine.png",
+	description: "Protéine de faible masse moléculaire identifiée dans plusieurs échantillons biologiques.",
+	isComponent: false,
+},
 
-	{
-		id: "cicaline",
-		name: "Cicaline",
-		image: "/vaik-17/cicaline.png",
-		description: "Protéine étudiée dans les sécrétions de cigales tropicales.",
-		isComponent: false,
-	},
+{
+	id: "nexiline",
+	name: "Nexiline",
+	image: "/vaik-17/nexiline.png",
+	description: "Composé protéique étudié dans des travaux de biochimie expérimentale.",
+	isComponent: false,
+},
 ];
 
 /**
