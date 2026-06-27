@@ -39,6 +39,34 @@ export function calculateRemainingMs(timer: RunTimer): number {
 }
 
 /**
+ * Calcule le temps restant (en ms) qu'affichait le timer à un instant passé `atMs`.
+ * Utilisé pour reconstituer, après rechargement, le temps restant au moment où une
+ * épreuve a été validée. Exact tant qu'aucune pause n'a eu lieu APRÈS cet instant
+ * (cas normal d'une partie déjà gagnée) ; sinon approximation par excès.
+ */
+export function calculateRemainingMsAt(timer: RunTimer, atMs: number): number {
+	switch (timer.state) {
+		case 'IDLE':
+			return timer.durationMs;
+
+		case 'PAUSED': {
+			// Le temps est figé à la mise en pause, quel que soit `atMs`
+			if (!timer.startedAt || !timer.pausedAt) return timer.durationMs;
+			const elapsedBeforePause = timer.pausedAt.getTime() - timer.startedAt.getTime();
+			return Math.max(0, timer.durationMs - elapsedBeforePause + timer.accumulatedPausedMs);
+		}
+
+		case 'RUNNING':
+		case 'ENDED':
+		default: {
+			if (!timer.startedAt) return timer.durationMs;
+			const elapsed = atMs - timer.startedAt.getTime();
+			return Math.max(0, timer.durationMs - elapsed + timer.accumulatedPausedMs);
+		}
+	}
+}
+
+/**
  * Convertit un timer DB en objet pour l'API
  */
 export function timerToJSON(timer: RunTimer) {

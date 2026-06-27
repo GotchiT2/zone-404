@@ -14,6 +14,9 @@
 	const dispatch = createEventDispatcher();
 
 	export let token;
+	// Index des épreuves déjà validées en base : permet de reprendre la synthèse
+	// au bon endroit après un rechargement (composants déjà trouvés pré-remplis).
+	export let validatedTrials = [];
 
 	const SLOT_COUNT = ANTIDOTE_COMPONENT_COUNT;
 
@@ -501,7 +504,29 @@
 		checkComplete();
 	}
 
+	// Restaure les composants déjà validés (reprise après rechargement).
+	// Ne déclenche pas checkComplete : si tout était validé, la page afficherait
+	// directement l'écran de victoire sans monter ce composant.
+	function restoreProgress() {
+		if (!validatedTrials || validatedTrials.length === 0) return;
+		const validatedSet = new Set(validatedTrials);
+
+		for (const item of SEARCHABLE_ITEMS) {
+			if (!item.isComponent || !validatedSet.has(item.trialIndex)) continue;
+			if (foundIds.has(item.id)) continue;
+
+			foundIds = new Set(foundIds).add(item.id);
+			const idx = slots.findIndex((s) => s === null);
+			if (idx !== -1) {
+				slots[idx] = { id: item.id, name: item.name, image: item.image };
+			}
+			syncedTrials.add(item.trialIndex);
+		}
+		slots = slots;
+	}
+
 	onMount(() => {
+		restoreProgress();
 		searchInput?.focus();
 		setupTimerSSE();
 	});

@@ -1,15 +1,7 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
-
-	const dispatch = createEventDispatcher();
-
 	export let roomName;
 	// Temps restant dans la partie au moment de la validation finale (ex: "12:34")
 	export let remainingTime = null;
-
-	function handleRestart() {
-		dispatch('restart');
-	}
 </script>
 
 <div class="success-stage">
@@ -28,14 +20,6 @@
 			<span class="time-label">Temps restant à la validation</span>
 			<span class="time-value">{remainingTime ?? '--:--'}</span>
 		</div>
-	</div>
-
-	<!-- Actions -->
-	<div class="actions">
-		<button on:click={handleRestart} class="btn-primary">
-			<span class="btn-icon">🔄</span>
-			Recommencer l'expérience
-		</button>
 	</div>
 </div>
 
@@ -135,35 +119,6 @@
 		line-height: 1;
 		color: #3fb950;
 		font-variant-numeric: tabular-nums;
-	}
-
-	/* Actions */
-	.actions {
-		display: flex;
-		justify-content: center;
-	}
-
-	.btn-primary {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		padding: 0.75rem 1.5rem;
-		font-weight: 600;
-		border: none;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.2s;
-		background: #1f6feb;
-		color: white;
-	}
-
-	.btn-primary:hover {
-		background: #1a5ccc;
-	}
-
-	.btn-icon {
-		font-size: 1.125rem;
 	}
 
 	/* Responsive */

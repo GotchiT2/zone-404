@@ -3,14 +3,33 @@
 	import DebugStage from '$lib/components/escape-game/DebugStage.svelte';
 	import AntidoteStage from '$lib/components/escape-game/AntidoteStage.svelte';
 	import SuccessStage from '$lib/components/escape-game/SuccessStage.svelte';
-	
+	import { SEARCHABLE_ITEMS, GAME_STAGES } from '$lib/toto/escape-game-config';
+
 	export let data: PageData;
-	
+
+	// Index des épreuves correspondant à chaque stade (source : config du jeu)
+	const DEBUG_TRIAL = GAME_STAGES.find((s) => s.id === 'debug')?.trialIndex ?? 1;
+	const ANTIDOTE_TRIALS = SEARCHABLE_ITEMS.filter((i) => i.isComponent).map(
+		(i) => i.trialIndex as number
+	);
+
+	// Détermine le stade courant à partir des épreuves déjà validées en base,
+	// afin de reprendre au bon endroit après un rechargement.
+	function resolveInitialStage(validated: number[]): 'debug' | 'antidote' | 'success' {
+		const set = new Set(validated);
+		if (ANTIDOTE_TRIALS.length > 0 && ANTIDOTE_TRIALS.every((t) => set.has(t))) return 'success';
+		if (set.has(DEBUG_TRIAL)) return 'antidote';
+		return 'debug';
+	}
+
 	// État du jeu : 'debug' | 'antidote' | 'success'
-	let currentStage: 'debug' | 'antidote' | 'success' = 'debug';
+	let currentStage: 'debug' | 'antidote' | 'success' = resolveInitialStage(
+		data.validatedTrials ?? []
+	);
 
 	// Temps restant dans la partie au moment de la validation finale
-	let remainingTime: string | null = null;
+	// (reconstitué depuis la base si on recharge directement sur l'écran de victoire)
+	let remainingTime: string | null = data.remainingTime ?? null;
 
 	// Gestion de la progression
 	function handleDebugComplete() {
@@ -20,20 +39,6 @@
 	function handleAntidoteComplete(event: CustomEvent<{ remainingTime?: string }>) {
 		remainingTime = event.detail?.remainingTime ?? null;
 		currentStage = 'success';
-	}
-	
-	// Reset du jeu (recommencer)
-	function handleRestart() {
-		// Confirmation avant de recommencer
-		const confirmed = confirm('Êtes-vous sûr de vouloir recommencer l\'expérience ? Cela vous ramènera au début.');
-		
-		if (confirmed) {
-			// Retour à l'étape initiale
-			currentStage = 'debug';
-			
-			// Scroll vers le haut
-			window.scrollTo({ top: 0, behavior: 'smooth' });
-		}
 	}
 </script>
 
@@ -51,9 +56,13 @@
 			{#if currentStage === 'debug'}
 				<DebugStage token={data.token} on:complete={handleDebugComplete} />
 			{:else if currentStage === 'antidote'}
-				<AntidoteStage token={data.token} on:complete={handleAntidoteComplete} />
+				<AntidoteStage
+					token={data.token}
+					validatedTrials={data.validatedTrials ?? []}
+					on:complete={handleAntidoteComplete}
+				/>
 			{:else}
-				<SuccessStage roomName={data.roomName} {remainingTime} on:restart={handleRestart} />
+				<SuccessStage roomName={data.roomName} {remainingTime} />
 			{/if}
 		</main>
 	</div>

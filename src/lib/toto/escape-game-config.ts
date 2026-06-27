@@ -615,62 +615,78 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 
 // ÉPREUVE 7 - Signal audio / microscope
 
-{
-	id: "velorine",
-	name: "Velorine",
-	image: "/vaik-17/velorine.png",
-	description: "Protéine isolée à partir du venin des serpents Véloriens et étudiée pour ses propriétés d'adhésion cellulaire.",
-	isComponent: true,
-	trialIndex: 7,
-},
+	{
+		id: "trictenase",
+		name: "Tricténase",
+		image: "/vaik-17/trictenase.png",
+		description: "Protéine isolée à partir de Tricténotoma et étudiée pour favoriser l'adhésion et la régénération des tissus cellulaires.",
+		isComponent: true,
+		trialIndex: 7,
+	},
 
-{
-	id: "araxine",
-	name: "Araxine",
-	image: "/vaik-17/araxine.png",
-	description: "Protéine expérimentale associée à certains arthropodes venimeux.",
-	isComponent: false,
-},
+	{
+		id: "scorpidine",
+		name: "Scorpidine",
+		image: "/vaik-17/scorpidine.png",
+		description: "Peptide expérimental extrait du venin de scorpions noirs géants.",
+		isComponent: false,
+	},
 
-{
-	id: "nectrazine",
-	name: "Nectrazine",
-	image: "/vaik-17/nectrazine.png",
-	description: "Molécule protéique identifiée dans plusieurs espèces forestières.",
-	isComponent: false,
-},
+	{
+		id: "phasmine",
+		name: "Phasmine",
+		image: "/vaik-17/phasmine.png",
+		description: "Protéine structurelle identifiée chez plusieurs espèces de phasmes.",
+		isComponent: false,
+	},
 
-{
-	id: "amphorine",
-	name: "Amphorine",
-	image: "/vaik-17/amphorine.png",
-	description: "Protéine étudiée dans certaines sécrétions d'amphibiens.",
-	isComponent: false,
-},
+	{
+		id: "curculine",
+		name: "Curculine",
+		image: "/vaik-17/curculine.png",
+		description: "Molécule biologique étudiée chez différents charançons.",
+		isComponent: false,
+	},
 
-{
-	id: "lacertine",
-	name: "Lacertine",
-	image: "/vaik-17/lacertine.png",
-	description: "Molécule biologique isolée chez plusieurs reptiles.",
-	isComponent: false,
-},
+	{
+		id: "lucanine",
+		name: "Lucanine",
+		image: "/vaik-17/lucanine.png",
+		description: "Protéine présente dans l'hémolymphe de certains lucanes asiatiques.",
+		isComponent: false,
+	},
 
-{
-	id: "corvine",
-	name: "Corvine",
-	image: "/vaik-17/corvine.png",
-	description: "Protéine rare observée dans certains échantillons aviaires.",
-	isComponent: false,
-},
+	{
+		id: "decticine",
+		name: "Decticine",
+		image: "/vaik-17/decticine.png",
+		description: "Peptide isolé chez plusieurs espèces d'orthoptères.",
+		isComponent: false,
+	},
 
-{
-	id: "noctiline",
-	name: "Noctiline",
-	image: "/vaik-17/noctiline.png",
-	description: "Molécule expérimentale étudiée chez différentes espèces nocturnes.",
-	isComponent: false,
-},
+	{
+		id: "scarabine",
+		name: "Scarabine",
+		image: "/vaik-17/scarabine.png",
+		description: "Molécule organique observée dans la cuticule de grands scarabées.",
+		isComponent: false,
+	},
+
+	{
+		id: "myriadine",
+		name: "Myriadine",
+		image: "/vaik-17/myriadine.png",
+		description: "Substance expérimentale identifiée chez plusieurs espèces de mille-pattes.",
+		isComponent: false,
+	},
+
+	{
+		id: "cicaline",
+		name: "Cicaline",
+		image: "/vaik-17/cicaline.png",
+		description: "Protéine étudiée dans les sécrétions de cigales tropicales.",
+		isComponent: false,
+	},
 ];
 
 /**
