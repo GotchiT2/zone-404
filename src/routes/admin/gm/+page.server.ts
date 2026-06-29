@@ -62,6 +62,8 @@ async function loadRoomData(roomSlug: string) {
 		runId: currentRun.id,
 		trials,
 		timer: currentRun.timer ? timerToJSON(currentRun.timer) : null,
+		survivors: currentRun.survivors.toString(),
+		errorCount: currentRun.errorCount,
 		messages: messages.map(m => ({
 			id: m.id,
 			text: m.text,

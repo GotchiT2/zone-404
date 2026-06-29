@@ -5,6 +5,7 @@
 	import DebugStage from '$lib/components/escape-game/DebugStage.svelte';
 	import AntidoteStage from '$lib/components/escape-game/AntidoteStage.svelte';
 	import SuccessStage from '$lib/components/escape-game/SuccessStage.svelte';
+	import DefeatStage from '$lib/components/escape-game/DefeatStage.svelte';
 	import LoadingStage from '$lib/components/escape-game/LoadingStage.svelte';
 	import { SEARCHABLE_ITEMS, GAME_STAGES } from '$lib/toto/escape-game-config';
 
@@ -28,8 +29,8 @@
 		return 'debug';
 	}
 
-	// État du jeu : 'debug' | 'antidote' | 'success'
-	let currentStage: 'debug' | 'antidote' | 'success' = resolveInitialStage(
+	// État du jeu : 'debug' | 'antidote' | 'success' | 'defeat'
+	let currentStage: 'debug' | 'antidote' | 'success' | 'defeat' = resolveInitialStage(
 		data.validatedTrials ?? []
 	);
 
@@ -42,9 +43,23 @@
 		currentStage = 'antidote';
 	}
 
-	function handleAntidoteComplete(event: CustomEvent<{ remainingTime?: string }>) {
+	// Live population data forwarded from AntidoteStage on completion/defeat
+	let liveSurvivors: string | null = null;
+	let liveErrorCount: number | null = null;
+	let defeatReason: 'time' | 'population' = 'time';
+
+	function handleAntidoteComplete(event: CustomEvent<{ remainingTime?: string; survivors?: string; errorCount?: number }>) {
 		remainingTime = event.detail?.remainingTime ?? null;
+		liveSurvivors = event.detail?.survivors ?? null;
+		liveErrorCount = event.detail?.errorCount ?? null;
 		currentStage = 'success';
+	}
+
+	function handleAntidoteDefeat(event: CustomEvent<{ reason?: string; survivors?: string; errorCount?: number }>) {
+		defeatReason = (event.detail?.reason as 'time' | 'population') ?? 'time';
+		liveSurvivors = event.detail?.survivors ?? null;
+		liveErrorCount = event.detail?.errorCount ?? null;
+		currentStage = 'defeat';
 	}
 
 	// --- Écran de chargement tant que le GM n'a pas lancé la partie ---
@@ -112,14 +127,28 @@
 			{:else if currentStage === 'debug'}
 				<DebugStage token={data.token} on:complete={handleDebugComplete} />
 			{:else if currentStage === 'antidote'}
-				<AntidoteStage
-					token={data.token}
-					validatedTrials={data.validatedTrials ?? []}
-					on:complete={handleAntidoteComplete}
-				/>
-			{:else}
-				<SuccessStage roomName={data.roomName} {remainingTime} />
-			{/if}
+		<AntidoteStage
+			token={data.token}
+			validatedTrials={data.validatedTrials ?? []}
+			initialErrorCount={data.errorCount ?? 0}
+			on:complete={handleAntidoteComplete}
+			on:defeat={handleAntidoteDefeat}
+		/>
+		{:else if currentStage === 'success'}
+		<SuccessStage 
+				roomName={data.roomName} 
+				{remainingTime} 
+				survivors={liveSurvivors ?? data.survivors}
+				errorCount={liveErrorCount ?? data.errorCount}
+		/>
+		{:else if currentStage === 'defeat'}
+		<DefeatStage
+			roomName={data.roomName}
+			reason={defeatReason}
+			survivors={liveSurvivors ?? data.survivors}
+			errorCount={liveErrorCount ?? data.errorCount}
+		/>
+		{/if}
 		</main>
 	</div>
 </div>

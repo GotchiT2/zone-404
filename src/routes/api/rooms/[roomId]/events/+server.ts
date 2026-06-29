@@ -35,6 +35,12 @@ export const GET: RequestHandler = async ({ params }) => {
 		throw error(404, 'No active run found');
 	}
 
+	// Population data for initial state
+	const populationData = {
+		survivors: currentRun.survivors.toString(),
+		errorCount: currentRun.errorCount
+	};
+
 	// Create SSE stream using the existing SSE system
 	let sseClient: any = null;
 	
@@ -52,6 +58,11 @@ export const GET: RequestHandler = async ({ params }) => {
 					encoder.encode(`event: timer_state\ndata: ${JSON.stringify(timerEvent)}\n\n`)
 				);
 			}
+
+			// Send initial population state
+			controller.enqueue(
+				encoder.encode(`event: population_update\ndata: ${JSON.stringify(populationData)}\n\n`)
+			);
 
 			// Heartbeat to keep connection alive
 			const heartbeat = setInterval(() => {

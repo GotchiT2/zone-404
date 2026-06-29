@@ -88,7 +88,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			roomId,
 			runId: currentRun.id,
 			trials,
-			timer: currentRun.timer ? timerToJSON(currentRun.timer) : null
+			timer: currentRun.timer ? timerToJSON(currentRun.timer) : null,
+			survivors: currentRun.survivors.toString(),
+			errorCount: currentRun.errorCount
 		};
 		
 		// Note: Le stream est déjà créé, on ne peut pas modifier le start() après coup

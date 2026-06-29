@@ -94,7 +94,9 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 		roomId,
 		runId: newRun.id,
 		trials: trialsData,
-		timer: timerToJSON(newTimer)
+		timer: timerToJSON(newTimer),
+		survivors: newRun.survivors.toString(),
+		errorCount: newRun.errorCount
 	});
 	
 	// Broadcaster également timer_state pour la page display

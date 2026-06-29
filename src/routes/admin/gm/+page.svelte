@@ -28,6 +28,8 @@
 			createdBy: string;
 			createdAt: string;
 		}> | undefined;
+		survivors?: string | undefined;
+		errorCount?: number | undefined;
 		error?: string | undefined;
 		displayTime: string;
 		messageText: string;
@@ -59,6 +61,48 @@
 	let eventSources: EventSource[] = [];
 	let timerIntervals: number[] = [];
 
+	// Population computation constants (same as AntidoteStage)
+	const START_POPULATION = 5_000_000_000;
+	const LOSS_PER_SECOND = 1_388_888;
+	const ERROR_PENALTY = 50_000_000;
+
+	// Per-room population tracking for dynamic computation
+	let roomDurationMs: Record<string, number> = {};
+	let roomTimerEndTimestamp: Record<string, number | null> = {};
+	let roomLastRemainingMs: Record<string, number> = {};
+	let roomDisplaySurvivors: Record<string, string> = $state({});
+
+	function computePopulation(roomId: string, remainingMs: number, errorCount: number, timerState: string): number {
+		const totalMs = roomDurationMs[roomId] || 0;
+		if (totalMs <= 0) return START_POPULATION;
+		if (timerState === 'PAUSED') {
+			const existing = roomDisplaySurvivors[roomId];
+			if (existing) return Number(existing.replace(/\s/g, '').replace(/\u202f/g, ''));
+		}
+		const elapsedMs = totalMs - remainingMs;
+		const elapsedSeconds = Math.floor(elapsedMs / 1000);
+		const timeLoss = elapsedSeconds * LOSS_PER_SECOND;
+		const errorLoss = errorCount * ERROR_PENALTY;
+		return Math.max(0, Math.round(START_POPULATION - timeLoss - errorLoss));
+	}
+
+	function updatePopulationDisplay(roomIndex: number) {
+		const room = rooms[roomIndex];
+		if (room.roomId !== 'salle-3' || !room.survivors) return;
+
+		const timerState = room.timer?.state || 'IDLE';
+		let remainingMs: number;
+
+		if (timerState === 'RUNNING' && roomTimerEndTimestamp[room.roomId]) {
+			remainingMs = Math.max(0, roomTimerEndTimestamp[room.roomId]! - Date.now());
+		} else {
+			remainingMs = roomLastRemainingMs[room.roomId] ?? room.timer?.remainingMs ?? 0;
+		}
+
+		const pop = computePopulation(room.roomId, remainingMs, room.errorCount ?? 0, timerState);
+		roomDisplaySurvivors[room.roomId] = pop.toLocaleString('fr-FR');
+	}
+
 	// Formater le temps pour l'affichage
 	function formatTime(ms: number): string {
 		const totalSeconds = Math.floor(ms / 1000);
@@ -87,6 +131,9 @@
 		} else {
 			room.displayTime = formatTime(room.timer.remainingMs);
 		}
+
+		// Update population display for salle-3
+		updatePopulationDisplay(roomIndex);
 	}
 
 	// Actions timer
@@ -278,7 +325,22 @@
 				rooms[index].timer = newData.timer;
 				rooms[index].runId = newData.runId;
 				rooms[index].messages = [];
+				rooms[index].survivors = newData.survivors || '5000000000';
+				rooms[index].errorCount = newData.errorCount ?? 0;
+				// Reset population tracking
+				const rid = rooms[index].roomId;
+				roomDurationMs[rid] = 0;
+				roomTimerEndTimestamp[rid] = null;
+				roomLastRemainingMs[rid] = 0;
+				roomDisplaySurvivors[rid] = Number(rooms[index].survivors).toLocaleString('fr-FR');
 				updateTimerDisplay(index);
+			});
+
+			eventSource.addEventListener('population_update', (e) => {
+				const newData = JSON.parse(e.data);
+				rooms[index].survivors = newData.survivors;
+				rooms[index].errorCount = newData.errorCount;
+				updatePopulationDisplay(index);
 			});
 
 			eventSource.addEventListener('timer_state', (e) => {
@@ -288,6 +350,19 @@
 					remainingMs: newData.remainingMs,
 					updatedAt: newData.serverNow
 				};
+				// Track duration and end timestamp for population computation
+				const rid = rooms[index].roomId;
+				if (newData.durationMs) {
+					roomDurationMs[rid] = newData.durationMs;
+				} else {
+					roomDurationMs[rid] = Math.max(roomDurationMs[rid] || 0, newData.remainingMs);
+				}
+				roomLastRemainingMs[rid] = newData.remainingMs;
+				if (newData.status === 'RUNNING' && newData.endsAt) {
+					roomTimerEndTimestamp[rid] = new Date(newData.endsAt).getTime();
+				} else {
+					roomTimerEndTimestamp[rid] = null;
+				}
 				updateTimerDisplay(index);
 			});
 
@@ -447,8 +522,22 @@
 						</div>
 					</div>
 
-					<!-- Timer -->
-					<div class="card preset-tonal-surface p-4 space-y-3">
+				<!-- Population Stats (only for salle-3) -->
+				{#if room.roomId === 'salle-3'}
+					<div class="flex gap-2">
+						<div class="flex-1 card preset-tonal-surface p-3 text-center">
+							<div class="text-[10px] font-semibold text-surface-400 uppercase tracking-wider">Survivants</div>
+							<div class="text-lg font-black text-error-400 font-mono">{roomDisplaySurvivors[room.roomId] || Number(room.survivors).toLocaleString('fr-FR')}</div>
+						</div>
+						<div class="flex-1 card preset-tonal-surface p-3 text-center">
+							<div class="text-[10px] font-semibold text-surface-400 uppercase tracking-wider">Erreurs</div>
+							<div class="text-lg font-black text-warning-400 font-mono">{room.errorCount ?? 0}</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Timer -->
+				<div class="card preset-tonal-surface p-4 space-y-3">
 						<div class="flex items-center gap-2">
 							<span class="text-lg">⏱️</span>
 							<span class="font-semibold text-surface-200">Timer</span>

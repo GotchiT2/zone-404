@@ -17,6 +17,8 @@
 	// Index des épreuves déjà validées en base : permet de reprendre la synthèse
 	// au bon endroit après un rechargement (composants déjà trouvés pré-remplis).
 	export let validatedTrials = [];
+	// Nombre d'erreurs déjà enregistrées en base (pour persister après refresh)
+	export let initialErrorCount = 0;
 
 	const SLOT_COUNT = ANTIDOTE_COMPONENT_COUNT;
 
@@ -50,10 +52,15 @@
 	let modalItem = null; // SearchableItem affiché dans la modale
 	let modalFeedback = null; // { type: 'success' | 'error' | 'info', message }
 	let isValidating = false;
+	
+	// Affichage d'erreur avec pénalité (animation fancy)
+	let errorPenaltyDisplay = null; // { message: string, show: boolean }
+	let errorPenaltyTimeout = null;
 
 	// Synchronisation API + fin d'étape
 	let syncedTrials = new Set();
 	let isComplete = false;
+	let isDefeated = false; // true when game over (population 0 or timer expired)
 
 	// Timer en direct de la salle "salle-3" (flux SSE public)
 	const TIMER_ROOM_ID = 'salle-3';
@@ -66,24 +73,34 @@
 	let timerInterval = null;
 	let timerReconnectTimeout = null;
 
-	// Compteur d'êtres humains vivants : décroît avec le temps jusqu'à ~5
-	const START_POPULATION = 8_000_000_000;
-	const MIN_POPULATION = 5;
+	// Compteur d'êtres humains vivants : décroît linéairement avec le temps
+	const START_POPULATION = 5_000_000_000;
+	const LOSS_PER_SECOND = 1_388_888; // ~5 milliards / 3600 secondes
+	const ERROR_PENALTY = 50_000_000; // 50 millions par erreur
+	
 	let population = START_POPULATION;
+	let dbErrorCount = initialErrorCount; // Nombre d'erreurs stocké en base (initialisé depuis le serveur)
 
 	$: populationDisplay = population.toLocaleString('fr-FR');
-	$: populationPercent = totalMs > 0 ? Math.min(100, (population / START_POPULATION) * 100) : 100;
+	$: populationPercent = Math.min(100, Math.max(0, (population / START_POPULATION) * 100));
 
 	/**
-	 * Interpolation géométrique : population = MIN * (START/MIN)^fraction.
-	 * fraction = tempsRestant / tempsTotal (1 au début, 0 à la fin).
-	 * Garantit une convergence vers MIN_POPULATION quand le temps tend vers 0.
+	 * Calcul linéaire de la population :
+	 * population = START - (temps_écoulé_secondes * LOSS_PER_SECOND) - (erreurs * ERROR_PENALTY)
+	 * Note: Si le timer est en pause, on garde la population actuelle (pas de décroissance)
 	 */
 	function computePopulation(remainingMs) {
 		if (totalMs <= 0) return START_POPULATION;
-		const fraction = Math.min(1, Math.max(0, remainingMs / totalMs));
-		const pop = MIN_POPULATION * Math.pow(START_POPULATION / MIN_POPULATION, fraction);
-		return Math.max(MIN_POPULATION, Math.round(pop));
+		// Si le timer est en pause, on garde la population gelée
+		if (timerStatus === 'PAUSED') {
+			return population;
+		}
+		const elapsedMs = totalMs - remainingMs;
+		const elapsedSeconds = Math.floor(elapsedMs / 1000);
+		const timeLoss = elapsedSeconds * LOSS_PER_SECOND;
+		const errorLoss = dbErrorCount * ERROR_PENALTY;
+		const computed = START_POPULATION - timeLoss - errorLoss;
+		return Math.max(0, Math.round(computed));
 	}
 
 	$: filledCount = slots.filter(Boolean).length;
@@ -111,13 +128,35 @@
 		}
 		roomTime = formatTime(remaining);
 		population = computePopulation(remaining);
+
+		// Defeat detection: population reached 0 or timer expired
+		if (!isDefeated && !isComplete) {
+			if (population <= 0) {
+				triggerDefeat('population');
+			} else if (timerStatus === 'RUNNING' && remaining <= 0) {
+				triggerDefeat('time');
+			}
+		}
+	}
+
+	function triggerDefeat(reason) {
+		if (isDefeated || isComplete) return;
+		isDefeated = true;
+		const finalSurvivors = population.toString();
+		const finalErrorCount = dbErrorCount;
+		setTimeout(() => dispatch('defeat', { reason, survivors: finalSurvivors, errorCount: finalErrorCount }), 500);
 	}
 
 	function handleTimerState(event) {
 		timerStatus = event.status;
 		lastRemainingMs = event.remainingMs;
-		// La plus grande valeur observée approxime la durée totale du timer
-		totalMs = Math.max(totalMs, event.remainingMs);
+		// Utiliser la durée réelle du timer envoyée par le serveur
+		if (event.durationMs) {
+			totalMs = event.durationMs;
+		} else {
+			// Fallback : la plus grande valeur observée approxime la durée totale
+			totalMs = Math.max(totalMs, event.remainingMs);
+		}
 
 		if (event.status === 'RUNNING' && event.endsAt) {
 			timerEndTimestamp = new Date(event.endsAt).getTime();
@@ -141,6 +180,19 @@
 				handleTimerState(JSON.parse(e.data));
 			} catch (err) {
 				console.error('Timer state parse error:', err);
+			}
+		});
+
+		// Écouter les mises à jour de population (erreurs enregistrées en base)
+		timerEventSource.addEventListener('population_update', (e) => {
+			try {
+				const data = JSON.parse(e.data);
+				if (typeof data.errorCount === 'number') {
+					dbErrorCount = data.errorCount;
+					updateRoomTimer();
+				}
+			} catch (err) {
+				console.error('Population update parse error:', err);
 			}
 		});
 
@@ -184,7 +236,7 @@
 	// ----- Pop-up dédiée au scan QR -----
 
 	function openScanModal() {
-		if (isComplete) return;
+		if (isComplete || errorPenaltyDisplay) return;
 		modalItem = null; // ferme une éventuelle fiche produit pour éviter l'empilement
 		showSuggestions = false;
 		scanModalOpen = true;
@@ -225,6 +277,8 @@
 			clearTimeout(scanModalDebounce);
 			scanModalDebounce = null;
 		}
+
+		if (errorPenaltyDisplay) return; // Block during penalty overlay
 
 		const raw = scanModalValue.trim();
 		if (!raw) return;
@@ -282,7 +336,7 @@
 			scanDebounceTimeout = null;
 		}
 
-		if (isComplete) return;
+		if (isComplete || errorPenaltyDisplay) return;
 		if (!searchQuery.trim()) return;
 
 		// Cas scan douchette : validation directe, sans modale
@@ -335,12 +389,37 @@
 	}
 
 	/**
+	 * Envoie une erreur à l'API pour mettre à jour la population
+	 */
+	async function reportError() {
+		try {
+			const response = await fetch(`/api/gm/rooms/${TIMER_ROOM_ID}/population/update`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ errorIncrement: 1 })
+			});
+			
+			if (response.ok) {
+				const data = await response.json();
+				dbErrorCount = data.errorCount || dbErrorCount + 1;
+				// Force recalculation de la population
+				updateRoomTimer();
+			}
+		} catch (err) {
+			console.error('Failed to report error:', err);
+		}
+	}
+
+	/**
 	 * Cœur de validation partagé entre la modale et le scan douchette.
 	 * Renvoie 'error' (leurre), 'duplicate' (déjà trouvé) ou 'success'.
 	 * En cas de succès : remplit un encart, synchronise l'API et vérifie la fin.
 	 */
 	async function applyAnswer(item) {
-		if (!item.isComponent) return 'error';
+		if (!item.isComponent) {
+			await reportError();
+			return 'error';
+		}
 		if (foundIds.has(item.id)) return 'duplicate';
 
 		foundIds = new Set(foundIds).add(item.id);
@@ -361,15 +440,23 @@
 	}
 
 	async function validateModal() {
-		if (!modalItem || isValidating) return;
+		if (!modalItem || isValidating || errorPenaltyDisplay) return;
 
 		const item = modalItem;
 
-		if (!item.isComponent) {
-			modalFeedback = {
-				type: 'error',
-				message: "Ce produit ne fait pas partie de la formule de l'antidote."
-			};
+	if (!item.isComponent) {
+			// Fermer la modale immédiatement et vider la recherche
+			// pour empêcher de re-soumettre le même composant après la pénalité
+			closeModal();
+			searchQuery = '';
+			suggestions = [];
+			showSuggestions = false;
+			
+			// Afficher l'erreur avec pénalité
+			showErrorPenalty();
+			
+			// Appeler l'API pour enregistrer l'erreur
+			await reportError();
 			return;
 		}
 
@@ -396,6 +483,23 @@
 			closeModal();
 		}, 1200);
 	}
+	
+	function showErrorPenalty() {
+		errorPenaltyDisplay = {
+			message: '-50 000 000',
+			show: true
+		};
+		
+		if (errorPenaltyTimeout) clearTimeout(errorPenaltyTimeout);
+		errorPenaltyTimeout = setTimeout(() => {
+			if (errorPenaltyDisplay) {
+				errorPenaltyDisplay.show = false;
+			}
+			setTimeout(() => {
+				errorPenaltyDisplay = null;
+			}, 800); // Temps pour l'animation de sortie
+		}, 5000);
+	}
 
 	function checkComplete() {
 		const count = slots.filter(Boolean).length;
@@ -403,7 +507,9 @@
 			isComplete = true;
 			// Fige le temps restant affiché à l'instant exact de la dernière validation
 			const remainingTime = roomTime;
-			setTimeout(() => dispatch('complete', { remainingTime }), 2000);
+			const finalSurvivors = population.toString();
+			const finalErrorCount = dbErrorCount;
+			setTimeout(() => dispatch('complete', { remainingTime, survivors: finalSurvivors, errorCount: finalErrorCount }), 2000);
 		}
 	}
 
@@ -428,6 +534,8 @@
 	}
 
 	function handleSearchKeydown(event) {
+		// Bloquer toute interaction pendant la pénalité d'erreur
+		if (errorPenaltyDisplay) return;
 		// Si la modale est ouverte, on laisse la fenêtre gérer Entrée/Échap
 		if (modalItem) return;
 
@@ -459,6 +567,9 @@
 	}
 
 	function handleWindowKeydown(event) {
+		// Bloquer toute interaction clavier pendant la pénalité d'erreur
+		if (errorPenaltyDisplay) return;
+
 		// Raccourci d'ouverture de la pop-up de scan
 		if (event.key === 'F2') {
 			event.preventDefault();
@@ -539,6 +650,7 @@
 		if (scanDebounceTimeout) clearTimeout(scanDebounceTimeout);
 		if (scanModalDebounce) clearTimeout(scanModalDebounce);
 		if (scanModalFeedbackTimeout) clearTimeout(scanModalFeedbackTimeout);
+		if (errorPenaltyTimeout) clearTimeout(errorPenaltyTimeout);
 	});
 </script>
 
@@ -590,12 +702,12 @@
 						placeholder="Rechercher un composant… (3 lettres minimum)"
 						autocomplete="off"
 						spellcheck="false"
-						disabled={isComplete}
-					/>
-					<button
-						class="search-btn"
-						on:click={submitSearch}
-						disabled={isComplete || !searchQuery.trim()}
+				disabled={isComplete || !!errorPenaltyDisplay}
+			/>
+			<button
+				class="search-btn"
+				on:click={submitSearch}
+				disabled={isComplete || !!errorPenaltyDisplay || !searchQuery.trim()}
 					>
 						Valider
 					</button>
@@ -620,7 +732,7 @@
 					{/if}
 				</div>
 				<div class="search-tools">
-					<button class="scan-open-btn" on:click={openScanModal} disabled={isComplete}>
+				<button class="scan-open-btn" on:click={openScanModal} disabled={isComplete || !!errorPenaltyDisplay}>
 						📷 Scanner un QR code <kbd>F2</kbd>
 					</button>
 				</div>
@@ -691,14 +803,15 @@
 				</div>
 			{/if}
 
-			<!-- Debug button (hidden by default) -->
-			<button
-				on:click={fillDebug}
-				class="btn-debug"
-				title="Debug: pré-remplir les réponses"
-			>
-				🔧
-			</button>
+
+	<!-- Debug button (hidden by default) -->
+	<button
+		on:click={fillDebug}
+		class="btn-debug"
+		title="Debug: pré-remplir les réponses"
+	>
+		🔧
+	</button>
 		</div>
 
 		<!-- Sidebar Monitoring -->
@@ -749,6 +862,17 @@
 		</aside>
 	</div>
 </div>
+
+<!-- Error Penalty Display (full-page overlay) -->
+{#if errorPenaltyDisplay}
+	<div class="error-penalty-fullpage" class:show={errorPenaltyDisplay.show}>
+		<div class="error-penalty-content">
+			<div class="error-penalty-number">{errorPenaltyDisplay.message}</div>
+			<div class="error-penalty-label">humains sur Terre</div>
+			<div class="error-penalty-sublabel">PÉNALITÉ D'ERREUR</div>
+		</div>
+	</div>
+{/if}
 
 <!-- Modale produit -->
 {#if modalItem}
@@ -1707,6 +1831,97 @@
 		.monitoring-sidebar {
 			position: relative;
 			top: 0;
+		}
+	}
+
+	/* Full-page Error Penalty Overlay */
+	.error-penalty-fullpage {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(10, 0, 0, 0.95);
+		backdrop-filter: blur(8px);
+		opacity: 0;
+		transition: opacity 0.6s ease;
+		pointer-events: none;
+	}
+
+	.error-penalty-fullpage.show {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	.error-penalty-content {
+		text-align: center;
+		animation: penaltyAppear 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.error-penalty-number {
+		font-family: var(--font-mono);
+		font-size: clamp(4rem, 12vw, 10rem);
+		font-weight: 900;
+		color: var(--accent-red);
+		line-height: 1;
+		text-shadow:
+			0 0 40px rgba(255, 77, 77, 0.6),
+			0 0 80px rgba(255, 77, 77, 0.3),
+			0 0 120px rgba(255, 77, 77, 0.15);
+		animation: penaltyPulse 1.5s ease-in-out infinite;
+	}
+
+	.error-penalty-label {
+		font-family: var(--font-ui);
+		font-size: clamp(1.2rem, 3vw, 2rem);
+		font-weight: 600;
+		color: var(--text-primary);
+		margin-top: 1rem;
+		letter-spacing: 0.02em;
+	}
+
+	.error-penalty-sublabel {
+		font-family: var(--font-mono);
+		font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.3em;
+		color: var(--accent-red);
+		margin-top: 1.5rem;
+		padding: 0.5rem 1.5rem;
+		border: 2px solid var(--accent-red);
+		border-radius: 4px;
+		display: inline-block;
+		background: rgba(255, 77, 77, 0.1);
+	}
+
+	@keyframes penaltyAppear {
+		0% {
+			opacity: 0;
+			transform: scale(0.8);
+		}
+		60% {
+			transform: scale(1.05);
+		}
+		100% {
+			opacity: 1;
+			transform: scale(1);
+		}
+	}
+
+	@keyframes penaltyPulse {
+		0%, 100% {
+			text-shadow:
+				0 0 40px rgba(255, 77, 77, 0.6),
+				0 0 80px rgba(255, 77, 77, 0.3),
+				0 0 120px rgba(255, 77, 77, 0.15);
+		}
+		50% {
+			text-shadow:
+				0 0 60px rgba(255, 77, 77, 0.8),
+				0 0 100px rgba(255, 77, 77, 0.5),
+				0 0 160px rgba(255, 77, 77, 0.25);
 		}
 	}
 

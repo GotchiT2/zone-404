@@ -94,6 +94,7 @@ export function timerToDisplayEvent(timer: RunTimer) {
 	return {
 		status: timer.state,
 		remainingMs,
+		durationMs: timer.durationMs,
 		endsAt,
 		serverNow
 	};

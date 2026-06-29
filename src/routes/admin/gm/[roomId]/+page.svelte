@@ -13,6 +13,8 @@
 	let roomName = $state(data.roomName);
 	let runId = $state(data.runId);
 	let messages = $state(data.messages || []);
+	let survivors = $state(data.survivors || '5000000000');
+	let errorCount = $state(data.errorCount || 0);
 	
 	let eventSource: EventSource | null = null;
 	let timerInterval: number | null = null;
@@ -220,6 +222,8 @@
 		const newData = JSON.parse(e.data);
 		trials = newData.trials;
 		runId = newData.runId;
+		survivors = newData.survivors || survivors;
+		errorCount = newData.errorCount || errorCount;
 		// Ne PAS mettre à jour le timer ici - c'est géré par timer_state uniquement
 	});
 		
@@ -233,14 +237,16 @@
 			}
 		});
 		
-		eventSource.addEventListener('reset', (e) => {
-			const newData = JSON.parse(e.data);
-			trials = newData.trials;
-			timer = newData.timer;
-			runId = newData.runId;
-			messages = [];
-			updateTimerDisplay();
-		});
+	eventSource.addEventListener('reset', (e) => {
+		const newData = JSON.parse(e.data);
+		trials = newData.trials;
+		timer = newData.timer;
+		runId = newData.runId;
+		messages = [];
+		survivors = newData.survivors || '5000000000';
+		errorCount = newData.errorCount ?? 0;
+		updateTimerDisplay();
+	});
 		
 		eventSource.addEventListener('timer_state', (e) => {
 			const newData = JSON.parse(e.data);
@@ -261,10 +267,16 @@
 			updateTimerDisplay();
 		});
 		
-		eventSource.addEventListener('message_created', (e) => {
-			const newData = JSON.parse(e.data);
-			messages = [...messages, newData];
-		});
+	eventSource.addEventListener('message_created', (e) => {
+		const newData = JSON.parse(e.data);
+		messages = [...messages, newData];
+	});
+	
+	eventSource.addEventListener('population_update', (e) => {
+		const newData = JSON.parse(e.data);
+		survivors = newData.survivors;
+		errorCount = newData.errorCount;
+	});
 		
 	eventSource.onerror = (e) => {
 		console.error('[GM] SSE error:', e);
@@ -346,7 +358,7 @@
 			</span>
 			<span class="text-xl font-semibold text-surface-200">épreuves validées</span>
 		</div>
-		<div class="w-full bg-surface-700 rounded-full h-8 overflow-hidden shadow-inner border-2 border-surface-600">
+		<div class="w-full bg-surface-700 rounded-full h-8 overflow-hidden shadow-inner border-2 border-surface-600 mb-6">
 			<div 
 				class="h-full bg-gradient-to-r from-success-500 via-primary-500 to-secondary-500 transition-all duration-500 ease-out shadow-lg flex items-center justify-center text-white font-bold"
 				style="width: {progressPercentage}%"
@@ -354,6 +366,18 @@
 				{#if progressPercentage > 15}
 					<span class="drop-shadow-lg">{Math.round(progressPercentage)}%</span>
 				{/if}
+			</div>
+		</div>
+		
+		<!-- Population Stats -->
+		<div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t-2 border-surface-600">
+			<div class="bg-surface-800/50 p-4 rounded-lg border border-error-500/30">
+				<div class="text-xs font-mono uppercase tracking-wider text-surface-400 mb-2">Survivants</div>
+				<div class="text-2xl font-black text-error-400 font-mono">{Number(survivors).toLocaleString('fr-FR')}</div>
+			</div>
+			<div class="bg-surface-800/50 p-4 rounded-lg border border-warning-500/30">
+				<div class="text-xs font-mono uppercase tracking-wider text-surface-400 mb-2">Erreurs</div>
+				<div class="text-2xl font-black text-warning-400 font-mono">{errorCount}</div>
 			</div>
 		</div>
 	</div>

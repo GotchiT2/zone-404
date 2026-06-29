@@ -43,6 +43,8 @@ model Run {
   roomId    Int
   startedAt DateTime  @default(now())
   endedAt   DateTime? // null = run courante, non-null = terminée
+  survivors BigInt    @default(5000000000) // Population de survivants (démarre à 5 milliards)
+  errorCount Int      @default(0) // Nombre d'erreurs commises dans l'Antidote stage
   
   room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
   statuses  RunTrialStatus[]

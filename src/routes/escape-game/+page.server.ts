@@ -78,6 +78,22 @@ export const load: PageServerLoad = async ({ url }) => {
 		}
 	}
 
+	// Récupérer les données de run pour les stats (survivors, errorCount)
+	let survivors: string | null = null;
+	let errorCount: number | null = null;
+	
+	if (tokenData) {
+		const run = await prisma.run.findUnique({
+			where: { id: tokenData.runId },
+			select: { survivors: true, errorCount: true }
+		});
+		
+		if (run) {
+			survivors = run.survivors.toString();
+			errorCount = run.errorCount;
+		}
+	}
+
 	// Token valide : retourner les données nécessaires au jeu
 	return {
 		token,
@@ -85,6 +101,8 @@ export const load: PageServerLoad = async ({ url }) => {
 		roomName: 'Laboratoire Omega', // Nom par défaut pour l'affichage
 		validatedTrials,
 		remainingTime,
-		gameStarted
+		gameStarted,
+		survivors,
+		errorCount
 	};
 };

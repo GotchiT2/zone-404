@@ -2,6 +2,9 @@
 	export let roomName;
 	// Temps restant dans la partie au moment de la validation finale (ex: "12:34")
 	export let remainingTime = null;
+	// Nombre de survivants et d'erreurs
+	export let survivors = null;
+	export let errorCount = null;
 </script>
 
 <div class="success-stage">
@@ -20,6 +23,24 @@
 			<span class="time-label">Temps restant à la validation</span>
 			<span class="time-value">{remainingTime ?? '--:--'}</span>
 		</div>
+		
+		<!-- Stats de la partie -->
+		{#if survivors !== null || errorCount !== null}
+			<div class="stats-box">
+				{#if survivors !== null}
+					<div class="stat-item">
+						<span class="stat-label">Survivants</span>
+						<span class="stat-value survivors">{Number(survivors).toLocaleString('fr-FR')}</span>
+					</div>
+				{/if}
+				{#if errorCount !== null}
+					<div class="stat-item">
+						<span class="stat-label">Erreurs commises</span>
+						<span class="stat-value errors">{errorCount}</span>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 </div>
 
@@ -121,6 +142,51 @@
 		font-variant-numeric: tabular-nums;
 	}
 
+	/* Stats box */
+	.stats-box {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 1rem;
+		margin-top: 1.5rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid rgba(63, 185, 80, 0.2);
+	}
+
+	.stat-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 1rem;
+		background: rgba(0, 0, 0, 0.3);
+		border-radius: 6px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.stat-label {
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: #7d8590;
+		font-weight: 600;
+	}
+
+	.stat-value {
+		font-family: 'JetBrains Mono', 'Courier New', monospace;
+		font-size: 1.5rem;
+		font-weight: 700;
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.stat-value.survivors {
+		color: #ff7b72;
+	}
+
+	.stat-value.errors {
+		color: #ffa657;
+	}
+
 	/* Responsive */
 	@media (max-width: 640px) {
 		.hero-box {
@@ -139,6 +205,14 @@
 
 		.time-value {
 			font-size: 2.25rem;
+		}
+
+		.stats-box {
+			grid-template-columns: 1fr;
+		}
+
+		.stat-value {
+			font-size: 1.25rem;
 		}
 	}
 </style>
