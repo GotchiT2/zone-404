@@ -69,7 +69,6 @@
 
         <div id="projet-vaik-17" class="flex flex-col md:flex-row w-full justify-center items-center gap-8 md:gap-4 my-16 opacity-80">
             <div class="relative">
-                <span class="badge h5 bg-[#40CBB180] w-full md:w-fit absolute inset-0 md:inset-auto md:-right-10 md:-top-0 z-10 md:rotate-20">À venir...</span>
                 <img alt="" class="drop-shadow-[0_0_10px_#40CBB180]" src="/escape-labo-vert-2.png">
             </div>
             <div class="md:w-1/5">
@@ -83,7 +82,7 @@
                     population. Deviendrez vous les sauveurs de l’Humanité…?
                 </p>
                 <div class="flex gap-4"><span class="badge preset-filled-primary-500">Familial, à partir de 10 ans</span></div>
-                <!--            <a class="btn h6 bg-[#40CBB180] hover:bg-[#40CBB180] mt-8" href="/reservation">Réservez une session</a>-->
+                <a class="btn h6 bg-[#40CBB180] hover:bg-[#40CBB180] mt-8" href="/reservation">Réservez une session</a>
             </div>
         </div>
 
