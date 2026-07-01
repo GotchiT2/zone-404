@@ -144,6 +144,8 @@
 		isDefeated = true;
 		const finalSurvivors = population.toString();
 		const finalErrorCount = dbErrorCount;
+		// Pause the timer on the server so GM dashboard reflects the end
+		notifyGameEnd(reason);
 		setTimeout(() => dispatch('defeat', { reason, survivors: finalSurvivors, errorCount: finalErrorCount }), 500);
 	}
 
@@ -509,7 +511,25 @@
 			const remainingTime = roomTime;
 			const finalSurvivors = population.toString();
 			const finalErrorCount = dbErrorCount;
+			// Pause the timer on the server so GM dashboard reflects the end
+			notifyGameEnd('complete');
 			setTimeout(() => dispatch('complete', { remainingTime, survivors: finalSurvivors, errorCount: finalErrorCount }), 2000);
+		}
+	}
+
+	/**
+	 * Notifie le serveur que la partie est terminée (victoire ou défaite)
+	 * afin de mettre en pause le timer côté GM.
+	 */
+	async function notifyGameEnd(reason) {
+		try {
+			await fetch('/api/escape-game/end-game', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ token, reason })
+			});
+		} catch (err) {
+			console.error('Failed to notify game end:', err);
 		}
 	}
 

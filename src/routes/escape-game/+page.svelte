@@ -113,7 +113,7 @@
 
 	function startAudioIfNeeded() {
 		if (audioStarted || !bgAudio) return;
-		bgAudio.volume = 0.3;
+		bgAudio.volume = 0.1;
 		bgAudio.play().then(() => {
 			audioStarted = true;
 		}).catch(() => {
