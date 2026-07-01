@@ -499,6 +499,9 @@
 			}
 			setTimeout(() => {
 				errorPenaltyDisplay = null;
+				// Re-focus the search input now that the penalty is cleared
+				// (the input was disabled while errorPenaltyDisplay was set)
+				setTimeout(() => searchInput?.focus(), 0);
 			}, 800); // Temps pour l'animation de sortie
 		}, 5000);
 	}
