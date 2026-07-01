@@ -8,14 +8,14 @@ import { broadcastToRoom } from '$lib/server/sse';
 import { timerToDisplayEvent } from '$lib/server/timer';
 
 export const POST: RequestHandler = async ({ request }) => {
-	let body: { token: string; reason?: string };
+	let body: { token: string; reason?: string; survivors?: string; errorCount?: number };
 	try {
 		body = await request.json();
 	} catch {
 		throw error(400, 'Invalid JSON body');
 	}
 
-	const { token, reason } = body;
+	const { token, reason, survivors, errorCount } = body;
 
 	if (!token) {
 		throw error(400, 'Missing token');
@@ -54,11 +54,31 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	});
 
+	// Mettre à jour les survivants et erreurs si fournis
+	if (survivors !== undefined || errorCount !== undefined) {
+		const updateData: Record<string, unknown> = {};
+		if (survivors !== undefined) updateData.survivors = BigInt(survivors);
+		if (errorCount !== undefined) updateData.errorCount = errorCount;
+
+		await prisma.run.update({
+			where: { id: currentRun.id },
+			data: updateData
+		});
+	}
+
 	// Broadcaster via SSE pour que le GM voie le changement
 	try {
 		broadcastToRoom(tokenData.roomSlug, 'timer_state', timerToDisplayEvent(updatedTimer));
+
+		// Broadcaster aussi la mise à jour de population pour que le GM affiche le bon nombre
+		if (survivors !== undefined) {
+			broadcastToRoom(tokenData.roomSlug, 'population_update', {
+				survivors: survivors,
+				errorCount: errorCount ?? currentRun.errorCount
+			});
+		}
 	} catch (err) {
-		console.warn('Failed to broadcast timer pause:', err);
+		console.warn('Failed to broadcast game end:', err);
 	}
 
 	return json({

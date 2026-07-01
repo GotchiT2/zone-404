@@ -529,7 +529,7 @@
 			await fetch('/api/escape-game/end-game', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ token, reason })
+				body: JSON.stringify({ token, reason, survivors: population.toString(), errorCount: dbErrorCount })
 			});
 		} catch (err) {
 			console.error('Failed to notify game end:', err);
