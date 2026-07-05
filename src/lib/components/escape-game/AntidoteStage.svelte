@@ -76,7 +76,7 @@
 	// Compteur d'êtres humains vivants : décroît linéairement avec le temps
 	const START_POPULATION = 5_000_000_000;
 	const LOSS_PER_SECOND = 1_388_888; // ~5 milliards / 3600 secondes
-	const ERROR_PENALTY = 50_000_000; // 50 millions par erreur
+	const ERROR_PENALTY = 200_000_000; // 200 millions par erreur
 	
 	let population = START_POPULATION;
 	let dbErrorCount = initialErrorCount; // Nombre d'erreurs stocké en base (initialisé depuis le serveur)
@@ -526,11 +526,13 @@
 	 */
 	async function notifyGameEnd(reason) {
 		try {
-			await fetch('/api/escape-game/end-game', {
+			const response = await fetch('/api/escape-game/end-game', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ token, reason, survivors: population.toString(), errorCount: dbErrorCount })
 			});
+			const result = await response.json();
+			console.log('[notifyGameEnd] Response:', response.status, result);
 		} catch (err) {
 			console.error('Failed to notify game end:', err);
 		}

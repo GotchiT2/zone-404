@@ -46,12 +46,21 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	// Mettre en pause le timer
+	const now = new Date();
 	const updatedTimer = await prisma.runTimer.update({
 		where: { id: currentRun.timer.id },
 		data: {
 			state: 'PAUSED',
-			pausedAt: new Date()
+			pausedAt: now
 		}
+	});
+
+	console.log('[end-game] Timer paused:', {
+		state: updatedTimer.state,
+		startedAt: updatedTimer.startedAt,
+		pausedAt: updatedTimer.pausedAt,
+		durationMs: updatedTimer.durationMs,
+		accumulatedPausedMs: updatedTimer.accumulatedPausedMs
 	});
 
 	// Mettre à jour les survivants et erreurs si fournis

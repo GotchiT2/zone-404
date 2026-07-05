@@ -29,9 +29,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		const run = room.runs[0];
 
 		// Si errorIncrement est fourni, incrémenter le nombre d'erreurs
-		// et déduire 50 millions de la population
+		// et déduire 200 millions de la population
 		if (typeof errorIncrement === 'number' && errorIncrement > 0) {
-			const deduction = BigInt(50_000_000) * BigInt(errorIncrement);
+			const deduction = BigInt(200_000_000) * BigInt(errorIncrement);
 			
 			await prisma.run.update({
 				where: { id: run.id },
