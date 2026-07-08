@@ -64,7 +64,7 @@
 	// Population computation constants (same as AntidoteStage)
 	const START_POPULATION = 5_000_000_000;
 	const LOSS_PER_SECOND = 1_388_888;
-	const ERROR_PENALTY = 50_000_000;
+	const ERROR_PENALTY =200_000_000;
 
 	// Per-room population tracking for dynamic computation
 	let roomDurationMs: Record<string, number> = {};

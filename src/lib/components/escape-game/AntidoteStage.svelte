@@ -488,7 +488,7 @@
 	
 	function showErrorPenalty() {
 		errorPenaltyDisplay = {
-			message: '-50 000 000',
+			message: '-200 000 000',
 			show: true
 		};
 		
