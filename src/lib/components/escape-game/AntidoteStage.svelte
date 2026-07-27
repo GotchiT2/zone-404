@@ -4,7 +4,6 @@
 	import {
 		SEARCHABLE_ITEMS,
 		ANTIDOTE_COMPONENT_COUNT,
-		SCAN_PREFIX,
 		searchItems,
 		findItemByName,
 		parseScanCode,
@@ -40,18 +39,17 @@
 	let scanFeedbackTimeout = null;
 	let scanDebounceTimeout = null; // auto-validation quand la saisie scannée se stabilise
 
-	// Pop-up dédiée au scan QR (ouverte au raccourci clavier F2 ou via le bouton)
-	let scanModalOpen = false;
-	let scanModalValue = '';
-	let scanModalInput;
-	let scanModalFeedback = null; // { type, message }
-	let scanModalFeedbackTimeout = null;
-	let scanModalDebounce = null;
-
 	// Modale produit
 	let modalItem = null; // SearchableItem affiché dans la modale
 	let modalFeedback = null; // { type: 'success' | 'error' | 'info', message }
 	let isValidating = false;
+
+	// Anti-scan pendant la modale : une douchette envoie une rafale de caractères
+	// suivie d'un « Entrée ». Modale ouverte, aucune frappe n'est attendue :
+	// toute touche imprimable trahit donc un scan, et l'Entrée qui suit ne doit
+	// pas valider la fiche déjà affichée.
+	const SCAN_GUARD_MS = 400;
+	let lastPrintableKeyAt = 0;
 	
 	// Affichage d'erreur avec pénalité (animation fancy)
 	let errorPenaltyDisplay = null; // { message: string, show: boolean }
@@ -235,91 +233,6 @@
 		scanFeedbackTimeout = setTimeout(() => (scanFeedback = null), 4000);
 	}
 
-	// ----- Pop-up dédiée au scan QR -----
-
-	function openScanModal() {
-		if (isComplete || errorPenaltyDisplay) return;
-		modalItem = null; // ferme une éventuelle fiche produit pour éviter l'empilement
-		showSuggestions = false;
-		scanModalOpen = true;
-		scanModalValue = '';
-		scanModalFeedback = null;
-		setTimeout(() => scanModalInput?.focus(), 0);
-	}
-
-	function closeScanModal() {
-		scanModalOpen = false;
-		scanModalValue = '';
-		if (scanModalDebounce) clearTimeout(scanModalDebounce);
-		setTimeout(() => searchInput?.focus(), 0);
-	}
-
-	function setScanModalFeedback(type, message) {
-		scanModalFeedback = { type, message };
-		if (scanModalFeedbackTimeout) clearTimeout(scanModalFeedbackTimeout);
-		scanModalFeedbackTimeout = setTimeout(() => (scanModalFeedback = null), 4000);
-	}
-
-	// Dans la pop-up, toute saisie est un scan : on accepte l'id, le nom,
-	// ou une valeur préfixée VAIK17: (au cas où) — aucun préfixe requis.
-	function findScannedItem(raw) {
-		const code = parseScanCode(raw);
-		const key = code !== null ? code : raw;
-		return findItemById(key) || findItemByName(key);
-	}
-
-	function onScanModalInput() {
-		// La douchette tape vite puis s'arrête : auto-validation à la stabilisation
-		if (scanModalDebounce) clearTimeout(scanModalDebounce);
-		scanModalDebounce = setTimeout(validateScanNow, 150);
-	}
-
-	async function validateScanNow() {
-		if (scanModalDebounce) {
-			clearTimeout(scanModalDebounce);
-			scanModalDebounce = null;
-		}
-
-		if (errorPenaltyDisplay) return; // Block during penalty overlay
-
-		const raw = scanModalValue.trim();
-		if (!raw) return;
-
-		const item = findScannedItem(raw);
-		scanModalValue = ''; // prêt pour le scan suivant
-		setTimeout(() => scanModalInput?.focus(), 0);
-
-		if (!item) {
-			setScanModalFeedback('error', `« ${raw} » non reconnu.`);
-			return;
-		}
-
-		const result = await applyAnswer(item);
-		if (result === 'success') {
-			setScanModalFeedback('success', `${item.name} ajouté à la formule !`);
-		} else if (result === 'duplicate') {
-			setScanModalFeedback('info', `${item.name} a déjà été ajouté à la formule.`);
-		} else {
-			setScanModalFeedback('error', `${item.name} ne fait pas partie de la formule de l'antidote.`);
-		}
-
-		if (isComplete) {
-			setTimeout(closeScanModal, 1200);
-		}
-	}
-
-	function handleScanModalKeydown(event) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			event.stopPropagation();
-			validateScanNow();
-		} else if (event.key === 'Escape') {
-			event.preventDefault();
-			event.stopPropagation();
-			closeScanModal();
-		}
-	}
-
 	function selectSuggestion(item) {
 		searchQuery = item.name;
 		showSuggestions = false;
@@ -339,6 +252,9 @@
 		}
 
 		if (isComplete || errorPenaltyDisplay) return;
+		// Modale ouverte : aucune soumission depuis la barre de recherche
+		// (un scan ne doit jamais valider par-dessus la fiche affichée).
+		if (modalItem) return;
 		if (!searchQuery.trim()) return;
 
 		// Cas scan douchette : validation directe, sans modale
@@ -382,11 +298,26 @@
 		modalItem = item;
 		modalFeedback = null;
 		isValidating = false;
+		lastPrintableKeyAt = 0;
 	}
 
+	/**
+	 * Ferme la fiche produit : la recherche est systématiquement remise à zéro
+	 * (Échap, ✕, Annuler, clic sur le fond) pour que le champ ne conserve ni la
+	 * saisie ni un code scanné, puis le focus revient sur la barre de recherche.
+	 */
 	function closeModal() {
 		modalItem = null;
 		modalFeedback = null;
+		searchQuery = '';
+		suggestions = [];
+		showSuggestions = false;
+		highlightedIndex = -1;
+		searchError = '';
+		if (scanDebounceTimeout) {
+			clearTimeout(scanDebounceTimeout);
+			scanDebounceTimeout = null;
+		}
 		setTimeout(() => searchInput?.focus(), 0);
 	}
 
@@ -447,13 +378,10 @@
 		const item = modalItem;
 
 	if (!item.isComponent) {
-			// Fermer la modale immédiatement et vider la recherche
+			// Fermer la modale immédiatement (closeModal vide la recherche)
 			// pour empêcher de re-soumettre le même composant après la pénalité
 			closeModal();
-			searchQuery = '';
-			suggestions = [];
-			showSuggestions = false;
-			
+
 			// Afficher l'erreur avec pénalité
 			showErrorPenalty();
 			
@@ -478,12 +406,8 @@
 			message: `${item.name} ajouté à la formule !`
 		};
 
-		// Fermer la modale après un court délai et réinitialiser la recherche
-		setTimeout(() => {
-			searchQuery = '';
-			suggestions = [];
-			closeModal();
-		}, 1200);
+		// Fermer la modale après un court délai (closeModal réinitialise la recherche)
+		setTimeout(closeModal, 1200);
 	}
 	
 	function showErrorPenalty() {
@@ -595,27 +519,38 @@
 		// Bloquer toute interaction clavier pendant la pénalité d'erreur
 		if (errorPenaltyDisplay) return;
 
-		// Raccourci d'ouverture de la pop-up de scan
-		if (event.key === 'F2') {
-			event.preventDefault();
-			if (scanModalOpen) {
-				closeScanModal();
-			} else {
-				openScanModal();
-			}
+		if (!modalItem) return;
+
+		// Un bouton de la modale a le focus : Entrée/Espace l'activent nativement
+		// (clic volontaire du joueur), on ne s'en mêle pas — sauf pour Échap.
+		if (event.target instanceof HTMLElement && event.target.tagName === 'BUTTON' && event.key !== 'Escape') {
 			return;
 		}
 
-		// Pop-up de scan ouverte : les touches sont gérées par son propre input
-		if (scanModalOpen) return;
-
-		if (!modalItem) return;
+		// Modale ouverte : toute touche imprimable vient forcément d'une douchette.
+		// On la neutralise (elle n'atteint pas la barre de recherche) et on note
+		// l'instant pour reconnaître l'« Entrée » de fin de scan juste après.
+		if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+			event.preventDefault();
+			lastPrintableKeyAt = Date.now();
+			return;
+		}
 
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			closeModal();
 		} else if (event.key === 'Enter') {
 			event.preventDefault();
+			// « Entrée » émise dans la foulée d'un scan : on refuse la validation,
+			// seule une action volontaire du joueur peut confirmer la fiche.
+			if (Date.now() - lastPrintableKeyAt < SCAN_GUARD_MS) {
+				lastPrintableKeyAt = 0;
+				modalFeedback = {
+					type: 'info',
+					message: 'Scan ignoré : confirmez ce composant avec le bouton Valider.'
+				};
+				return;
+			}
 			validateModal();
 		}
 	}
@@ -623,21 +558,6 @@
 	function hideSuggestionsSoon() {
 		// Laisse le temps au clic sur une suggestion de s'enregistrer
 		setTimeout(() => (showSuggestions = false), 150);
-	}
-
-	// Debug : pré-remplir tous les composants (à retirer en prod)
-	function fillDebug() {
-		for (const item of SEARCHABLE_ITEMS.filter((i) => i.isComponent)) {
-			if (foundIds.has(item.id)) continue;
-			foundIds = new Set(foundIds).add(item.id);
-			const idx = slots.findIndex((s) => s === null);
-			if (idx !== -1) {
-				slots[idx] = { id: item.id, name: item.name, image: item.image };
-			}
-			syncTrial(item.trialIndex);
-		}
-		slots = slots;
-		checkComplete();
 	}
 
 	// Restaure les composants déjà validés (reprise après rechargement).
@@ -673,8 +593,6 @@
 		if (timerReconnectTimeout) clearTimeout(timerReconnectTimeout);
 		if (scanFeedbackTimeout) clearTimeout(scanFeedbackTimeout);
 		if (scanDebounceTimeout) clearTimeout(scanDebounceTimeout);
-		if (scanModalDebounce) clearTimeout(scanModalDebounce);
-		if (scanModalFeedbackTimeout) clearTimeout(scanModalFeedbackTimeout);
 		if (errorPenaltyTimeout) clearTimeout(errorPenaltyTimeout);
 	});
 </script>
@@ -756,11 +674,6 @@
 						</ul>
 					{/if}
 				</div>
-				<div class="search-tools">
-				<button class="scan-open-btn" on:click={openScanModal} disabled={isComplete || !!errorPenaltyDisplay}>
-						📷 Scanner un QR code <kbd>F2</kbd>
-					</button>
-				</div>
 				{#if searchError}
 					<p class="search-error">⚠ {searchError}</p>
 				{/if}
@@ -802,8 +715,8 @@
 						Tapez le nom d'un composant dans la barre de recherche. Après
 						<strong>3 lettres</strong>, des suggestions apparaissent. Sélectionnez-en une
 						ou validez votre saisie pour ouvrir sa fiche, puis confirmez avec
-						<strong>Entrée</strong>. Pour scanner un QR code, ouvrez le scanner avec
-						<strong>F2</strong> : la validation y est automatique.
+						<strong>Entrée</strong>. Vous pouvez aussi scanner le QR code d'un élément
+						directement dans la barre de recherche.
 					</p>
 				</div>
 			</div>
@@ -827,16 +740,6 @@
 					<p>Antidote synthétisé avec succès ! Transfert vers l'analyse finale...</p>
 				</div>
 			{/if}
-
-
-	<!-- Debug button (hidden by default) -->
-	<button
-		on:click={fillDebug}
-		class="btn-debug"
-		title="Debug: pré-remplir les réponses"
-	>
-		🔧
-	</button>
 		</div>
 
 		<!-- Sidebar Monitoring -->
@@ -932,46 +835,6 @@
 					disabled={isValidating}
 				>
 					Valider <kbd>Entrée</kbd>
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
-
-<!-- Pop-up de scan QR (douchette) : validation automatique -->
-{#if scanModalOpen}
-	<div class="modal-overlay" on:click={closeScanModal} role="presentation">
-		<div class="modal scan-modal" on:click|stopPropagation role="dialog" aria-modal="true">
-			<button class="modal-close" on:click={closeScanModal} aria-label="Fermer">✕</button>
-
-			<div class="scan-modal-icon">📷</div>
-			<h3 class="modal-title">Scanner un composant</h3>
-			<p class="modal-description">
-				Scannez le QR code d'un élément avec la douchette. La validation est
-				automatique.
-			</p>
-
-			<input
-				bind:this={scanModalInput}
-				bind:value={scanModalValue}
-				on:input={onScanModalInput}
-				on:keydown={handleScanModalKeydown}
-				class="scan-modal-input"
-				type="text"
-				placeholder="En attente du scan…"
-				autocomplete="off"
-				spellcheck="false"
-			/>
-
-			{#if scanModalFeedback}
-				<div class="modal-feedback modal-feedback-{scanModalFeedback.type}">
-					{scanModalFeedback.message}
-				</div>
-			{/if}
-
-			<div class="modal-actions">
-				<button class="modal-btn modal-btn-secondary" on:click={closeScanModal}>
-					Fermer <kbd>Échap</kbd>
 				</button>
 			</div>
 		</div>
@@ -1223,76 +1086,6 @@
 		color: var(--accent-cyan);
 	}
 
-	/* Bouton d'ouverture du scanner */
-	.search-tools {
-		margin-top: var(--spacing-sm);
-		display: flex;
-		justify-content: flex-end;
-	}
-
-	.scan-open-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 14px;
-		background: var(--bg-panel);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius);
-		color: var(--text-secondary);
-		font-size: 13px;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.scan-open-btn:hover:not(:disabled) {
-		border-color: var(--accent-cyan);
-		color: var(--accent-cyan);
-	}
-
-	.scan-open-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.scan-open-btn kbd {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		padding: 2px 5px;
-		border-radius: 3px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-	}
-
-	/* Pop-up de scan */
-	.scan-modal {
-		text-align: center;
-	}
-
-	.scan-modal-icon {
-		font-size: 56px;
-		margin-bottom: var(--spacing-sm);
-	}
-
-	.scan-modal-input {
-		width: 100%;
-		margin: var(--spacing-lg) 0;
-		padding: 14px 16px;
-		background: var(--bg-panel);
-		border: 2px solid var(--accent-cyan);
-		border-radius: var(--radius);
-		color: var(--text-primary);
-		font-family: var(--font-mono);
-		font-size: 16px;
-		text-align: center;
-		outline: none;
-		box-shadow: 0 0 0 3px var(--cyan-soft);
-	}
-
-	.scan-modal-input::placeholder {
-		color: var(--text-muted);
-	}
-
 	/* Formula Card */
 	.formula-card {
 		background: var(--bg-secondary);
@@ -1515,26 +1308,6 @@
 
 	.message p {
 		margin: 0;
-	}
-
-	/* Debug Button */
-	.btn-debug {
-		position: fixed;
-		bottom: 20px;
-		right: 20px;
-		width: 40px;
-		height: 40px;
-		background: var(--bg-panel);
-		border: 1px solid var(--border-color);
-		border-radius: 50%;
-		font-size: 16px;
-		cursor: pointer;
-		opacity: 0.3;
-		transition: opacity 0.2s;
-	}
-
-	.btn-debug:hover {
-		opacity: 1;
 	}
 
 	/* Modale */
