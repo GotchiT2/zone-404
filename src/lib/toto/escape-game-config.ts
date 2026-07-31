@@ -649,9 +649,9 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 },
 
 {
-	id: "oprhyline",
-	name: "Oprhyline",
-	image: "/vaik-17/oprhyline.png",
+	id: "oprhiline",
+	name: "Oprhiline",
+	image: "/vaik-17/oprhiline.png",
 	description: "Protéine étudiée pour ses propriétés de stabilisation moléculaire.",
 	isComponent: false,
 },
