@@ -14,7 +14,7 @@ export const GAME_STAGES: GameStage[] = [
 	{
 		id: 'antidote',
 		name: 'Synthèse de l\'antidote',
-		trialIndex: 2, // Note: les sous-composants occupent les épreuves 2 à 7
+		trialIndex: 2, // Note: les sous-composants occupent les épreuves 2 à 8
 		description: 'Reconstitution de la formule de l\'antidote'
 	}
 ];
@@ -29,7 +29,7 @@ export const GAME_STAGES: GameStage[] = [
  * montre la photo (`image`) et la `description` du produit.
  *
  * - isComponent: true  => bonne réponse (remplit un encart de la formule)
- *   -> doit avoir un `trialIndex` unique et existant en base (2 à 7 pour la
+ *   -> doit avoir un `trialIndex` unique et existant en base (2 à 8 pour la
  *      salle-3 : l'épreuve 1 est réservée à la phase Debug/Terminal).
  * - isComponent: false => leurre (mauvaise réponse, message d'erreur).
  *
@@ -686,6 +686,17 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
 	image: "/vaik-17/nexiline.png",
 	description: "Composé protéique étudié dans des travaux de biochimie expérimentale.",
 	isComponent: false,
+},
+
+// ÉPREUVE 8
+
+{
+	id: "quinoleine",
+	name: "Quinoléine",
+	image: "/vaik-17/quinoleine.png",
+	description: "Composé hétérocyclique aromatique azoté, base de nombreux principes actifs antiparasitaires.",
+	isComponent: true,
+	trialIndex: 8,
 },
 ];
 

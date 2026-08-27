@@ -15,7 +15,7 @@
             id: '2',
             title: 'Quels moyens de paiement sont acceptés ?',
             description:
-                'En ligne, nous acceptons les paiements par carte bancaire. Sur place, nous acceptons les paiements en espèces ou par carte bancaire.',
+                'En ligne, nous acceptons les paiements par carte bancaire. Sur place, nous acceptons les paiements en espèces, par carte bancaire ou en chèques vacances (ANCV).',
         },
         {
             id: '3',
