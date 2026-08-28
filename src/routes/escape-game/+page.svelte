@@ -107,11 +107,35 @@
 		};
 	}
 
+	// --- Background audio loop ---
+	let bgAudio: HTMLAudioElement | null = null;
+	let audioStarted = false;
+
+	function startAudioIfNeeded() {
+		if (audioStarted || !bgAudio) return;
+		bgAudio.volume = 0.05;
+		bgAudio.play().then(() => {
+			audioStarted = true;
+		}).catch(() => {
+			// Browser blocked autoplay — will retry on next interaction
+		});
+	}
+
+	function handleFirstInteraction() {
+		startAudioIfNeeded();
+	}
+
 	onMount(() => {
 		watchGameStart();
+		// Try autoplay immediately (works if user already interacted with the page)
+		startAudioIfNeeded();
 	});
 	onDestroy(() => {
 		teardownStartWatcher();
+		if (bgAudio) {
+			bgAudio.pause();
+			bgAudio = null;
+		}
 	});
 </script>
 
@@ -123,7 +147,9 @@
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </svelte:head>
 
-<div class="lab-container">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="lab-container" on:click={handleFirstInteraction} on:keydown={handleFirstInteraction}>
+	<audio bind:this={bgAudio} src="/sound-effect.wav" loop preload="auto"></audio>
 	<div class="lab-content">
 		<main class="game-area">
 			{#if !gameStarted}
