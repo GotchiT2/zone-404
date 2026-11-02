@@ -329,13 +329,6 @@ export const SEARCHABLE_ITEMS: SearchableItem[] = [
     "isComponent": false
   },
   {
-    "id": "glycerol",
-    "name": "Glycérol",
-    "image": "/images/glossary/glycerol.jpg",
-    "description": "Liquide visqueux utilisé en pharmacie.",
-    "isComponent": false
-  },
-  {
     "id": "propylene-glycol",
     "name": "Propylène glycol",
     "image": "/images/glossary/propylene-glycol.jpg",
